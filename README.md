@@ -1,3 +1,3 @@
 # RandomAggLargeWithSnap
-Random Agg With SNAP Library
-Random Aggregation with SNAP Library (see include) on Windows with MinGW
+Random Agg
+with SNAP Library (see include) for Windows, compiled with MinGW
