@@ -1084,7 +1084,7 @@ bool TStr::IsPrefix(const char *Str) const {
 	if (len > thisLen) {
 		return false;
 	} else {
-        size_t minLen = Tmin(len, thisLen);
+        size_t minLen = Smin(len, thisLen);
 		int cmp = strncmp(Str, RStr->Bf, minLen);
 		return cmp == 0;
 	}

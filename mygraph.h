@@ -13,12 +13,16 @@ class Graph
 {
 public:
     Graph();
+    ~Graph();
     //for working with snap
     PUNGraph convertToSnapUnGraph() const;
     bool convertCommToSnapVec(TVec < TCnCom > &CommV);
     bool convertSnapCommtoMyComm(const TVec < TCnCom > &CommV, QList<QList<quint32> > &result);
     //some simple Gnp generator
     void generateHiddenGnp(double pin, double pout);
+    void generateHiddenGnp_LargeN(double pin, double pout, int n);
+    void generateSimpleCycle(const int &n);
+    void generateBinaryTree(const int &h);
     //
     void read_GML_file(QString filePath);
     void load_LFR_groundTruth();
@@ -29,6 +33,7 @@ public:
     void save_current_run_summary_file(QString fileName);
     void read_DUMEX_input(QString dirPath);
     void read_simple_edge(QString dirPath);
+    void read_edge(QString dirPath);
     void load_ground_truth_communities();
     void read_large_graph_with_ground_truth_communities(QString filePath);
     void read_superGraph(QString edgePath, QString summaryPath);
@@ -38,16 +43,24 @@ public:
     void LARGE_rerun();
     double LARGE_compute_modularity();
     double LARGE_compute_modularit_for_truth();
+    quint32 count_result_connected_component();
+    double compute_GN_index();
     //run
     void run_aggregation_on_selection(int n);
+    void LARGE_hard_reset();
     void LARGE_reset();
+    bool LARGE_reload();
     //stats
     double cal_average_clustering_coefficient();
     void clear_log();
+    //Random Mapping
+    void random_functional_digraph();
     //Girvan and Newman Betweenness Centrality
     void betweenness_centrality_clustering();
+    void fast_CMN();
     //aggregation
     void random_aggregate();
+    void reverse_random_aggregate();
     void random_aggregate_with_degree_comparison();
     void random_aggregate_with_weight_comparison();
     void random_aggregate_with_neighbour_initial_degree_bias();
@@ -95,6 +108,7 @@ private:
     void read_ground_truth_communities();
     bool checkGraphCondition();
     void reConnectGraph();
+    void clear_edge();
     // for large graph
     void reindexing();
     void reindexing_ground_truth();
@@ -119,8 +133,6 @@ private:
     void project_higher_levels_on_lower_levels(const QList<QPair<QString,QString> > &toParse);
     void mapping_colour_to_cluster(QMap<quint32, QString> &colourmap);
 
-
-    bool LARGE_reload();
     void LARGE_reload_edges();
     void LARGE_reload_superEdges();
     void save_current_clusters();

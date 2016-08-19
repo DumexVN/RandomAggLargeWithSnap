@@ -202,9 +202,15 @@ void Vertex::addEdge(Edge *edge)
 
 void Vertex::removeEdge(Edge *edge)
 {
-    myEdge.removeOne(edge);
-    Vertex * neighbour = this->get_neighbour_fromEdge(edge);
-    myNeighbours.removeOne(neighbour->getIndex());
+    if (myEdge.contains(edge))
+    {
+        if (edge != 0)
+        {
+            myEdge.removeOne(edge);
+            Vertex * neighbour = this->get_neighbour_fromEdge(edge);
+            myNeighbours.removeOne(neighbour->getIndex());
+        }
+    }
 }
 
 quint32 Vertex::getNumberEdge() const
@@ -215,7 +221,7 @@ quint32 Vertex::getNumberEdge() const
 void Vertex::remove_all_edges()
 {
     foreach (Edge *edge, myEdge)
-        delete edge;
+        edge->removeAll();
 }
 
 Edge *Vertex::getEdgeFromVertex(Vertex * v2)
@@ -540,12 +546,55 @@ bool Vertex::is_vertex_dragged_along() const
  * @brief Vertex::getMostMutualVertex
  */
 Edge * Vertex::getMostMutualVertex()
-{
+{/*
+    quint32 highest = 0;
+    QList<Edge*> candidate;
+    for (int i = 0; i < myEdge.size(); i++)
+    {
+        Vertex * neighbour = this->get_neighbour_fromEdge(myEdge[i]);
+
+        if (neighbour->getParent() == this)
+            continue;
+
+        QSet<quint32> thisAdj = this->getNeighbourIndexes().toSet();
+        QSet<quint32> neighbourAdj = neighbour->getNeighbourIndexes().toSet();
+        quint64 similar = thisAdj.intersect(neighbourAdj).size();
+        qDebug() << (similar==this->getNoOfTriangles(neighbour));
+        if (similar > highest)
+        {
+            highest = similar;
+            candidate.clear();
+            candidate.append(myEdge[i]);
+        }
+        else if (similar == highest)
+        {
+            candidate.append(myEdge[i]);
+        }
+    }
+    if (candidate.empty())
+    {
+        std::uniform_int_distribution<int> distribution(0,myEdge.size()-1);
+        int ran = distribution(gen);
+        return myEdge.at(ran);
+    }
+    else if (candidate.size() > 1)
+    {
+        std::uniform_int_distribution<int> distribution(0,candidate.size()-1);
+        int ran = distribution(gen);
+        return candidate.at(ran);
+    }
+    else
+        return candidate.at(0);*/
+
     QList<Edge*> ran_list;
     quint32 highest = 0;
     for (int i = 0; i < myEdge.size(); i++)
     {
         Vertex * neighbour = this->get_neighbour_fromEdge(myEdge[i]);
+
+        if (neighbour->getParent() == this)
+            continue;
+
         quint64 similar = this->getNoOfTriangles(neighbour);
         if (similar > highest)
         {
@@ -558,7 +607,7 @@ Edge * Vertex::getMostMutualVertex()
             ran_list.append(myEdge[i]);
         }
     }
-    if (ran_list.size() == 0)
+    if (ran_list.empty())
     {
         std::uniform_int_distribution<int> distribution(0,myEdge.size()-1);
         int ran = distribution(gen);
@@ -568,10 +617,10 @@ Edge * Vertex::getMostMutualVertex()
     {
         std::uniform_int_distribution<int> distribution(0,ran_list.size()-1);
         int ran = distribution(gen);
-        return myEdge.at(ran);
+        return ran_list.at(ran);
     }
     else
-        return ran_list[0];
+        return ran_list.at(0);
 }
 
 
@@ -832,5 +881,9 @@ void Vertex::resetClusterRelevant()
     noOfChild = 0;
     ExtraWeight = 0;
     myNeighbours.clear();
+    if (myEdge.size() > 0)
+    {
+        this->removeAll();
+    }
     myEdge.clear();
 }

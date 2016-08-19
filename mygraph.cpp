@@ -25,14 +25,35 @@ std::mt19937 generator(rd());
 
 
 QString globalDirPath;
-qint32 global_e = 0;
-qint32 global_v = 0;
+quint32 global_e = 0;
+quint32 global_v = 0;
 static int no_run = 0;
 
 Graph::Graph()
 {   //set up graphic scenes to display all kinds of stuff
     graphIsReady = false;
     generator.seed(sqrt(QTime::currentTime().msec()*QTime::currentTime().msec()));
+}
+
+Graph::~Graph()
+{
+
+    for (int i = 0; i < myEdgeList.size(); i++)
+        delete myEdgeList[i];
+    /*
+    for (int i = 0; i < myVertexList.size(); i++)
+        delete myVertexList[i];*/
+    myVertexList.clear();
+    myEdgeList.clear();
+    for (int i = 0; i < centroids.size(); i++)
+        delete centroids[i];
+    centroids.clear();
+    //
+    ground_truth_communities.clear();
+    hierarchy.clear();
+    large_result.clear();
+    large_excluded.clear();
+    overlapped_vertices_ground_truth_cluster.clear();
 }
 
 // -------------------------------- SNAP CONVERTER/RELATED ----------------------------------
@@ -116,10 +137,10 @@ void Graph::generateHiddenGnp(double z_in, double z_out)
         myVertexList.clear();
         myEdgeList.clear();
     }
-    int n = 128, m = 4, v_per_c = n/m;
+    int n = 10000, m = 4, v_per_c = n/m;
     QList<QPair<int,int> > e;
     std::uniform_real_distribution<double> dis(0,1);
-
+    int out = 0 ,in = 0;
     for (int i = 0; i < n; i++)
     {
         for (int j = i+1; j < n; j++)
@@ -133,6 +154,7 @@ void Graph::generateHiddenGnp(double z_in, double z_out)
                 if (ran <= z_in)
                 {
                     edge = true;
+                    in++;
                 }
             }
             else
@@ -140,6 +162,7 @@ void Graph::generateHiddenGnp(double z_in, double z_out)
                 if (ran <= z_out)
                 {
                     edge = true;
+                    out++;
                 }
             }
 
@@ -151,6 +174,7 @@ void Graph::generateHiddenGnp(double z_in, double z_out)
         }
     }
 
+    printf("In-edge: %d\nOut-edge: %d\n", in, out);
     for (int i = 0 ; i < n; i++)
     {
         Vertex * v = new Vertex;
@@ -179,10 +203,157 @@ void Graph::generateHiddenGnp(double z_in, double z_out)
         quint32 c_id = i/(v_per_c);
         C[c_id].append(i);
     }
+
     graphIsReady = true;
     ground_truth_communities = C;
     printf("- Hidden Partition Generated: \nV: %d\nE: %d\nGround Truth Comm: %d\n",
            myVertexList.size(), myEdgeList.size(), ground_truth_communities.size());
+}
+
+/** with large N
+ * @brief Graph::generateHiddenGnp_LargeN
+ * @param pin
+ * @param pout
+ * @param n
+ */
+
+void Graph::generateHiddenGnp_LargeN(double z_in, double z_out, int n)
+{
+    if (myVertexList.size() > 0 || myEdgeList.size() > 0)
+    {
+        myVertexList.clear();
+        myEdgeList.clear();
+    }
+    int m = 4, v_per_c = n/m;
+    if (n % m != 0){qDebug() << "ERROR! Select n as a multiple of 4 ... "; return;}
+    QList<QPair<int,int> > e;
+    std::uniform_real_distribution<double> dis(0,1);
+    int out = 0 ,in = 0;
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = i+1; j < n; j++)
+        {
+            double ran = dis(generator);
+            bool edge = false;
+            if (i == j)
+                continue;
+            else if (i/v_per_c == j/v_per_c)
+            {
+                if (ran <= z_in)
+                {
+                    edge = true;
+                    in++;
+                }
+            }
+            else
+            {
+                if (ran <= z_out)
+                {
+                    edge = true;
+                    out++;
+                }
+            }
+
+            if (edge)
+            {
+                QPair<int,int> edge = qMakePair(i,j);
+                e.append(edge);
+            }
+        }
+    }
+
+    printf("In-edge: %d\nOut-edge: %d\n", in, out);
+    for (int i = 0 ; i < n; i++)
+    {
+        Vertex * v = new Vertex;
+        v->setIndex(i);
+        myVertexList.append(v);
+    }
+
+    for (int i = 0 ; i < e.size(); i++)
+    {
+        QPair<int,int>  edge = e.at(i);
+        Edge * new_e = new Edge(myVertexList.at(edge.first),
+                                myVertexList.at(edge.second),
+                                i);
+        myEdgeList.append(new_e);
+    }
+    //set the ground truth
+    QList<QList<quint32> > C;
+    for (int i = 0; i < m; i++)
+    {
+        QList<quint32> c;
+        C.append(c);
+    }
+
+    for (int i = 0; i < n;i++)
+    {
+        quint32 c_id = i/(v_per_c);
+        C[c_id].append(i);
+    }
+
+    graphIsReady = true;
+    ground_truth_communities = C;
+    printf("- Hidden Partition Generated: \nV: %d\nE: %d\nGround Truth Comm: %d\n",
+           myVertexList.size(), myEdgeList.size(), ground_truth_communities.size());
+}
+
+/** Generate A Simple Cycle
+ * @brief Graph::generateSimpleCycle
+ * @param n
+ */
+void Graph::generateSimpleCycle(const int &n)
+{   //generate vertices
+    for(int i = 0; i < n; i++)
+    {
+        Vertex * v = new Vertex;
+        v->setIndex(i);
+        myVertexList.append(v);
+    }
+    //generate edges
+    for(int i = 0; i <= n-2; i++)
+    {
+        Vertex * v = myVertexList.at(i),
+               * u = myVertexList.at(i+1);
+        Edge * e1 = new Edge(v,u,myEdgeList.size());
+        myEdgeList.append(e1);
+    }
+    Edge * e = new Edge(myVertexList.first(), myVertexList.last(), myEdgeList.size());
+    myEdgeList.append(e);
+}
+
+/** Generate Large Binary Tree
+ * @brief Graph::generateBinaryTree
+ * @param h: height of the desired tree
+ *
+ */
+void Graph::generateBinaryTree(const int &h)
+{
+    unsigned int n = qPow(2,h) - 1;
+    for(int i = 0; i < n; i++)
+    {
+        Vertex * v = new Vertex;
+        v->setIndex(i);
+        myVertexList.append(v);
+    }
+    //generate edges
+
+    for(int i = 0; i < n; i++)
+    {
+        int level = qFloor(std::log2(i+1))+1;
+        if (level == h) continue;
+        unsigned int root = i,
+                leftC = i*2 + 1,
+                rightC = i*2 + 2;
+        Vertex * p  = myVertexList.at(root),
+               * l = myVertexList.at(leftC),
+               * r = myVertexList.at(rightC);
+        Edge * e1 = new Edge(p,l,myEdgeList.size()),
+             * e2 = new Edge(p,r,myEdgeList.size());
+        myEdgeList.append(e1);
+        myEdgeList.append(e2);
+    }
+
 }
 
 /** READ GML FILE AND PARSE FOR EDGE FILE
@@ -805,6 +976,7 @@ void Graph::read_simple_edge(QString dirPath)
     while (!ein.atEnd())
     {
         QStringList str = ein.readLine().split('\t');
+        if (str[0].startsWith("#")) continue;
         bool ok;
         quint32 v1 = str[0].toUInt(&ok), v2 = str[1].toUInt(&ok);
         if (ok)
@@ -847,6 +1019,96 @@ void Graph::read_simple_edge(QString dirPath)
         qDebug() << "Load V: " << myVertexList.size() << "; E: " << myEdgeList.size();
     }
     generate_base_graph_file(dirPath);
+}
+
+void Graph::read_edge(QString dirPath)
+{
+    QDir dir(dirPath);
+    if (!dir.exists())
+    {
+        qDebug() << "DIR NOT EXISTS! Terminating ...";
+        return;
+    }
+    globalDirPath = dirPath;
+    QStringList filters;
+    filters << "*.txt";
+    QFileInfoList file = dir.entryInfoList(filters);
+    QString e_file;
+    for (int i = 0; i < file.size(); i++)
+    {
+        QFileInfo f = file.at(i);
+        QString name = f.fileName();
+        if (name.contains("edge"))
+            e_file = f.absoluteFilePath();
+    }
+
+    //reload original vertices
+    //Parsing
+    QFile efile(e_file);
+    if (!efile.exists())
+    {
+        qDebug() << "FILE NOT FOUND! Recheck! Terminating ...";
+        return;
+    }
+    //else
+    //READ E FILE
+    efile.open(QFile::ReadOnly | QFile::Text);
+    QTextStream ein(&efile);
+    QList<QPair<quint32,quint32> > edge;
+    while (!ein.atEnd())
+    {
+        QStringList str = ein.readLine().split('\t');
+        if (str[0].startsWith("#")) continue;
+        bool ok;
+        quint32 v1 = str[0].toUInt(&ok), v2 = str[1].toUInt(&ok);
+        if (ok)
+        {
+            edge.append(qMakePair(v1,v2));
+        }
+    }
+    efile.close();
+    qDebug() << "Generating Edges ...";
+    typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::undirectedS> NormalGraph;
+    NormalGraph g;
+    for (int i = 0; i < edge.size(); i++)
+    {
+        QPair<quint32,quint32> p = edge.at(i);
+        boost::add_edge(p.first, p.second, g);
+    }
+    global_v = boost::num_vertices(g);
+    global_e = boost::num_edges(g);
+    // adding ve edge independent of global file
+    for (int i = 0; i < global_v; i++ )
+    {
+        Vertex * v = new Vertex;
+        v->setIndex(i);
+        myVertexList.append(v);
+    }
+
+    for (int i = 0; i < edge.size(); i++)
+    {
+        QPair<quint32,quint32> e = edge[i];
+        quint32 v = e.first, u = e.second;
+        Vertex * from = myVertexList.at(u);
+        Vertex * to = myVertexList.at(v);
+        Edge * newe = new Edge(from,to,i);
+        myEdgeList.append(newe);
+    }
+
+
+    bool fit = false;
+    if (myVertexList.size() == global_v && myEdgeList.size() == global_e)
+        fit = true;
+    qDebug() << "Check Sum" << fit;
+    if (fit)
+    {
+        graphIsReady = true;
+    }
+    else
+    {
+        qDebug() << "Preset V: " << global_v << "; E: " << global_e;
+        qDebug() << "Load V: " << myVertexList.size() << "; E: " << myEdgeList.size();
+    }
 }
 
 /** Load Ground Truth Communities and Parse it
@@ -956,6 +1218,15 @@ void Graph::reConnectGraph()
     return;
 }
 
+void Graph::clear_edge()
+{
+    for(int i = 0 ; i < myVertexList.size(); i++)
+        myVertexList.at(i)->removeAll();
+    for(int i = 0; i < myEdgeList.size(); i++)
+        delete myEdgeList[i];
+    myEdgeList.clear();
+}
+
 // -----------------------------RANDOM AGGREGATE CLUSTERING -------------------------
 // ----------------------------------------------------------------------------------
 /** Type I.a - Uniform (Everything is Uniformly at Random)
@@ -1012,6 +1283,65 @@ void Graph::random_aggregate()
     centroids = winners;
 
     qDebug("I.a - Time elapsed: %d ms", t0.elapsed());
+    large_graph_parse_result();
+}
+
+
+/** Ia_i The Inverse of Reverse Random Aggregate
+ * @brief Graph::reverse_random_aggregate
+ */
+
+void Graph::reverse_random_aggregate()
+{
+    qDebug() << "CHECKING CONDITION || RECONNECTING GRAPH";
+    qDebug() << "Graph Condition: " << graphIsReady <<";"<<myVertexList.size();
+    if (!checkGraphCondition())
+    {
+        reConnectGraph();
+    }
+    //initialise arrays
+    QList<Vertex*> players = myVertexList;
+    QList<Vertex*> winners;
+
+    quint32 t = 0;
+    QTime t0;
+    t0.start();
+    qDebug() << "I.a_(i) STARTING...";
+    while(!players.empty()) //start
+    {
+        //select a vertex uniformly at random
+        quint32 size = players.size();
+        std::uniform_int_distribution<quint32> distribution(0,size-1);
+        quint32 selected_index = distribution(generator);
+        Vertex * selected = players.at(selected_index);
+        if (selected->is_vertex_absorbed() || selected->getParent() != 0)
+        {
+            qDebug() << "Candidate Has Been Clustered!!!!! ";
+            return;
+        }
+        //get a neighbour
+        quint32 no_neighbour = selected->getNumberEdge();
+        if (no_neighbour == 0) // if there is no neighbour, declare a winner
+        {
+            winners.append(selected);
+            players.removeOne(selected);
+            t++;
+        }
+        else // else absorb
+        {
+            std::uniform_int_distribution<quint32> distribution2(0,no_neighbour-1);
+            quint32 selected_edge_index = distribution2(generator);
+            Edge * e = selected->getEdge(selected_edge_index);
+            Vertex * neighbour = selected->get_neighbour_fromEdge(e); //get the neighbour (not clean)
+            hierarchy.append(qMakePair(neighbour->getIndex(), selected->getIndex()));
+            neighbour->absorb_removeEdge(e);
+            players.removeOne(selected);
+            t++;
+        }
+    }
+    centroids = winners;
+
+    qDebug("I.a_i - Time elapsed: %d ms", t0.elapsed());
     large_graph_parse_result();
 }
 
@@ -1090,6 +1420,7 @@ void Graph::random_aggregate_with_degree_comparison()
  */
 void Graph::random_aggregate_with_weight_comparison()
 {
+    qDebug() << "HERE";
     if (!checkGraphCondition())
     {
         reConnectGraph();
@@ -1904,24 +2235,19 @@ void Graph::random_aggregate_retain_vertex_using_triangulation()
         std::uniform_int_distribution<quint32> distribution(0,size-1);
         quint32 selected_index = distribution(generator);
         Vertex * selected = players.at(selected_index);
-        if (selected->getNumberEdge() == 0)
-            players.removeOne(selected);
+        Edge * e = selected->getMostMutualVertex();
+        Vertex * neighbour, * winner, * loser;
+        if (e->toVertex() == selected)
+            neighbour = e->fromVertex();
         else
-        {
-            Edge * e = selected->getMostMutualVertex();
-            Vertex * neighbour, * winner, * loser;
-            if (e->toVertex() == selected)
-                neighbour = e->fromVertex();
-            else
-                neighbour = e->toVertex();
+            neighbour = e->toVertex();
 
-            winner = neighbour;
-            loser = selected;
-            //create the animation
-            winner->absorb_retainEdge(e);
-            hierarchy.append(qMakePair(loser->getIndex(), winner->getIndex()));
-            players.removeOne(loser);
-        }
+        winner = neighbour;
+        loser = selected;
+        //create the animation
+        winner->absorb_retainEdge(e);
+        hierarchy.append(qMakePair(loser->getIndex(), winner->getIndex()));
+        players.removeOne(loser);
         t++;
     }
     qDebug("III.a - Time elapsed: %d ms", t0.elapsed());
@@ -2732,7 +3058,6 @@ void Graph::read_DUMEX_input(QString dirPath)
  */
 void Graph::large_graph_parse_result()
 {
-    graphIsReady = false;
     qDebug() << "PARSING RESULT";
     if (centroids.empty())
     {
@@ -2741,7 +3066,6 @@ void Graph::large_graph_parse_result()
     }
     QList<QList<quint32> > C;
     //qDebug() << "C: " << centroids.size();
-
     for (int i = 0; i < centroids.size(); i++)
     {
         QList<quint32> c;
@@ -2763,15 +3087,14 @@ void Graph::large_graph_parse_result()
     /** Prepare data for indicies matching
       */
     large_result = C;
-
     C.clear();
-    print_result_stats();
+    /*
     qDebug() << "- Number of Clusters: " << large_result.size();
+    this->clear_edge();
     if (ground_truth_communities.empty()) //for non ground truth parsing
     {
         qDebug() << "GROUND TRUTH COMMUNITIES HAS NOT BEEN LOADED OR GRAPH HAS NOT BEEN CLUSTERED";
         qDebug() << "Only Modularity Can Be Calculated:";
-        myEdgeList.clear();
         if (no_run == 0)
             LARGE_reload_edges();
         else
@@ -2792,7 +3115,8 @@ void Graph::large_graph_parse_result()
         }
         else
             qDebug() << "ERROR: NUMBER OF UNIQUE ELEMTNS IN RESULT DIFF IN GROUND TRUTH (AFTER CHECKING EXCLUDED)";
-    }
+    }*/
+    graphIsReady = false;
 }
 
 /** Parse result of retain
@@ -2800,7 +3124,6 @@ void Graph::large_graph_parse_result()
  */
 void Graph::large_parse_retain_result()
 {
-    graphIsReady = false;
     typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::undirectedS> NormalGraph;
     NormalGraph g;
     for(int i = 0; i < myVertexList.size(); i++)
@@ -2835,7 +3158,7 @@ void Graph::large_parse_retain_result()
     large_result = clusters;
 
     clusters.clear();
-    print_result_stats();
+//    print_result_stats();
     if (ground_truth_communities.empty()) //for non ground truth parsing
     {
         qDebug() << "GROUND TRUTH COMMUNITIES HAS NOT BEEN LOADED OR GRAPH HAS NOT BEEN CLUSTERED";
@@ -2853,6 +3176,7 @@ void Graph::large_parse_retain_result()
         else
             qDebug() << "ERROR: NUMBER OF UNIQUE ELEMTNS IN RESULT DIFF IN GROUND TRUTH (AFTER CHECKING EXCLUDED)";
     }
+    graphIsReady = false;
 }
 
 void Graph::print_result_stats()
@@ -3482,7 +3806,7 @@ QList<double> Graph::LARGE_compute_Pairwise_efficient(int n)
     }
     nj.clear();
 
-    qDebug() << "Sheck sum Pairwise Indicies:" << ni_sum << nj_sum <<(ni_sum == nj_sum);
+//    qDebug() << "Sheck sum Pairwise Indicies:" << ni_sum << nj_sum <<(ni_sum == nj_sum);
 //    qDebug() << "ELEMENT:";
     n_square = qPow(n,2);
 //    qDebug() << "n:" << n << "n^2" << n_square <<"; nij^2:" << nij_square <<"; ni_square" << ni_square << "; nj_square:" << nj_square;
@@ -3507,14 +3831,16 @@ QList<double> Graph::LARGE_compute_Pairwise_efficient(int n)
 
     QList<double> result;
     result << RAND << Jaccard << ARI;
+    printf("RAND: %f\tJACCARD: %f\tARI: %f\n", RAND, Jaccard, ARI);
     return result;
 }
+
 
 quint64 Graph::calA(QList<quint64> param)
 {
     quint64 a = param[0];
     a = a/2;
-    qDebug() << "a:" << a;
+  //  qDebug() << "a:" << a;
     return a;
 }
 
@@ -3522,7 +3848,7 @@ quint64 Graph::calB(QList<quint64> param)
 {
     quint64 ai = param[0], nij_square = param[1];
     quint64 b = (ai-nij_square)/2;
-    qDebug() << "b:" << b;
+ //   qDebug() << "b:" << b;
     return b;
 }
 
@@ -3530,7 +3856,7 @@ quint64 Graph::calC(QList<quint64> param)
 {
     quint64 ni_square = param[0], nij_square = param[1];
     quint64 c = (ni_square - nij_square)/2;
-    qDebug() << "c:" << c;
+ //   qDebug() << "c:" << c;
     return c;
 }
 
@@ -3542,7 +3868,7 @@ quint64 Graph::calD(QList<quint64> param)
             nj_square = param[3];
     quint64 d = n_square + nij_square - ni_square - nj_square; //type ii: diff diff
     d /= 2;
-    qDebug() << "d:" << d;
+  //  qDebug() << "d:" << d;
     return d;
 }
 
@@ -3605,6 +3931,45 @@ void Graph::clear_log()
         log.remove();
 }
 
+/** RANDOM FUNCTIONAL DIGRAPH - RANDOM MAPPING (BOLLOBAS)
+ * The algorithm is as follows:
+ * - select v u.a.r
+ * - v maps to a neighbour u.a.r
+ * - do for all v
+ * @brief Graph::random_functional_digraph
+ */
+void Graph::random_functional_digraph()
+{
+    hierarchy.clear();
+    if (!checkGraphCondition())
+    {
+        reConnectGraph();
+    }
+    //initialise arrays
+
+    quint32 t = 0;
+    QTime t0;
+    t0.start();
+
+    for (int i = 0; i < myVertexList.size(); i++)
+    {
+        Vertex * selected = myVertexList.at(i); //get v
+        //get u
+        quint32 dv = selected->getNumberEdge();
+        std::uniform_int_distribution<quint32> distribution2(0,dv-1);
+        quint32 selected_edge_index = distribution2(generator);
+        Edge * e = selected->getEdge(selected_edge_index);
+        Vertex * neighbour = selected->get_neighbour_fromEdge(e); //get the neighbour (not clean)
+        hierarchy.append(qMakePair(selected->getIndex(), neighbour->getIndex()));
+        selected->absorb_retainEdge(e);
+        //points to that neighbour
+        t++;
+    }
+    qDebug("RFD - Time elapsed: %d ms", t0.elapsed());
+    large_parse_retain_result();
+}
+
+//////////////////////////// SNAP COMMUNITY ALGORITHM /////////////////////
 /** Girvan and Newman Betweennes Centrality Clustering
  * @brief Graph::betweenness_centrality_clustering
  */
@@ -3614,6 +3979,7 @@ void Graph::betweenness_centrality_clustering()
     {
         reConnectGraph();
     }
+    qDebug() << "Girvan Newman Betweenness Centrality Clustering Started";
     int k = ground_truth_communities.size();
     PUNGraph TGraph = convertToSnapUnGraph();
     TVec < TCnCom > CommV;
@@ -3622,21 +3988,44 @@ void Graph::betweenness_centrality_clustering()
     QList<QList<quint32> > result;
     convertSnapCommtoMyComm(CommV, result);
     large_result = result;
+    LARGE_compute_Pairwise_efficient(myVertexList.size());
+    graphIsReady = false;
 }
 
+/** Clauset-Newman-Moore community detection method.
+ * @brief Graph::fast_CMN
+ */
+void Graph::fast_CMN()
+{
+    if (!checkGraphCondition())
+    {
+        reConnectGraph();
+    }
+    qDebug() << "CNM Fast Clustering Started";
+    int k = ground_truth_communities.size();
+    PUNGraph TGraph = convertToSnapUnGraph();
+    TVec < TCnCom > CommV;
+    TSnap::CommunityCNM(TGraph, CommV);
+    QList<QList<quint32> > result;
+    convertSnapCommtoMyComm(CommV, result);
+    large_result = result;
+    LARGE_compute_Pairwise_efficient(myVertexList.size());
+    graphIsReady = false;
+}
+//////////////////////////// END OF SNAP COMMUNITY ALGORITHM /////////////////////
 
 /** Reset to prepare for next run
  * @brief Graph::LARGE_reset
  */
 void Graph::LARGE_reset()
 {
-    qDebug() << "Reseting ... ";
     for (int i = 0; i < myVertexList.size(); i++)
     {
-        myVertexList[i]->resetClusterRelevant();
-        myVertexList[i]->removeAll();
+        myVertexList.at(i)->resetClusterRelevant();
+        myVertexList.at(i)->removeAll();
     }
-    myEdgeList.clear();
+    //myEdgeList.clear();
+    clear_edge();
     hierarchy.clear();
     centroids.clear();
     large_result.clear();
@@ -3726,6 +4115,7 @@ void Graph::LARGE_reload_edges()
         myEdgeList.append(e);
     }
     edge.clear();
+    graphIsReady = true;
 }
 
 void Graph::LARGE_reload_superEdges()
@@ -3964,6 +4354,25 @@ void Graph::run_aggregation_on_selection(int n)
     }
 }
 
+void Graph::LARGE_hard_reset()
+{
+    for(int i = 0; i < myEdgeList.size(); i++)
+    {
+        delete myEdgeList[i];
+    }
+    for (int i = 0; i < myVertexList.size(); i++)
+    {
+        myVertexList[i]->removeAll();
+        delete myVertexList[i];
+    }
+    myVertexList.clear();
+    myEdgeList.clear();
+    hierarchy.clear();
+    centroids.clear();
+    large_result.clear();
+    graphIsReady = false;
+}
+
 
 /** Calculate Modularity
  * @brief Graph::LARGE_compute_modularity
@@ -3972,11 +4381,12 @@ void Graph::run_aggregation_on_selection(int n)
 double Graph::LARGE_compute_modularity()
 {
     //firstly reload the edges
-    if (global_e == 0)
+    if (!graphIsReady)
     {
-        qDebug() << "Graph Has Not Been Initialised Properly: E = 0 ! Trying to Probe Again;";
-        global_e = myEdgeList.size();
+        clear_edge();
+        LARGE_reload_edges();
     }
+    global_e = myEdgeList.size();
     //go through result
     double Q = 0.0;
     for (int i = 0; i < large_result.size(); i++)
@@ -4006,8 +4416,8 @@ double Graph::LARGE_compute_modularity()
         double Qi = e - qPow(a,2);
         Q += Qi;
     }
+    graphIsReady = false;
     return Q;
-
 }
 
 double Graph::LARGE_compute_modularit_for_truth()
@@ -4054,6 +4464,124 @@ double Graph::LARGE_compute_modularit_for_truth()
     }
     return Q;
 
+}
+
+quint32 Graph::count_result_connected_component()
+{
+    typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::undirectedS> NormalGraph;
+    NormalGraph g;
+    for(int i = 0; i < myVertexList.size(); i++)
+        boost::add_vertex(g);
+
+    for (int i = 0; i < hierarchy.size(); i++)
+    {
+        QPair<quint32,quint32> p = hierarchy.at(i);
+        boost::add_edge(p.first, p.second, g);
+    }
+
+    std::vector<quint32> component(boost::num_vertices(g));
+    quint32 num = boost::connected_components(g, &component[0]);
+    return num;
+}
+
+
+
+/** Girvan and Newman Fraction of Correctly Classified
+ * @brief Graph::compute_GN_index
+ * @return
+ */
+
+int countCommon(const QList<quint32> &A, const QList<quint32> &B)
+{
+    QSet<quint32> a = A.toSet(),
+                  b = B.toSet();
+    return a.intersect(b).size();
+}
+
+bool checkMerge(const QList<quint32> &A, const QList<QList<quint32> > &truth)
+{
+    QSet<quint32> cA = A.toSet();
+    int match = 0;
+    for(int i = 0 ; i < truth.size(); i++)
+    {
+        QList<quint32> c = truth.at(i);
+        int count = 0;
+        for(int j = 0; j < c.size(); j++)
+        {
+            if (cA.contains(c[j])) count++;
+        }
+        if (count == c.size()) match++;
+    }
+    if (match >= 2) return true;
+    else return false;
+}
+
+double Graph::compute_GN_index()
+{
+    quint32 n = myVertexList.size();
+    //indexing ground truth community
+    QMap<quint32,quint32> comm_map; //mapping vertex_id - comm_id
+    for (int i = 0; i < large_result.size(); i++)
+    {
+        for(int j = 0; j < large_result.at(i).size(); j++)
+        {
+            quint32 vi = large_result.at(i).at(j);
+            comm_map.insert(vi,i);
+        }
+
+    }
+    //indexing result community
+    QList<int> v;
+    for (int i = 0; i < n; i++)
+        v.append(-1);
+
+    for (int i = 0; i < v.size(); i++)
+    {
+        if (v[i] == -1)
+        {
+            quint32 truth_comm_index = i/32;
+            QList<quint32> truth = ground_truth_communities[truth_comm_index];
+            quint32 result_comm_index = comm_map.value(i);
+            QList<quint32> result = large_result[result_comm_index];
+            if (!result.contains(i) && !truth.contains(i))
+            {
+                qDebug() << "STRANGE";
+                return -1.0;
+            }
+            //check for merging first
+            if (result.size() > 64 && checkMerge(result, ground_truth_communities))
+            {
+                for(int i = 0; i < result.size(); i++)
+                    v[result[i]] = 0;
+            }
+            else
+            {
+            //compare matching
+                int common = countCommon(truth, result);
+                int correct = common - 1;
+                if (correct < truth.size() / 2)
+                {
+                    v[i] = 0;
+                }
+                else if (correct >= truth.size() / 2)
+                {
+                    v[i] = 1;
+                }
+            }
+        }
+    }
+
+    int match = 0;
+    for (int i = 0; i < v.size(); i++)
+    {
+        if (v[i] < 0)
+            qDebug() << "Newman Index - ERROR Potential Duplication/Un-parsed result";
+        else
+            match += v[i];
+    }
+    double newman_index = (double)match/n;
+    printf("Girvan Newman Fraction of Correctly Classified: %f", newman_index);
+    return newman_index;
 }
 
 // --------------------------- POST AGGREGATION -----------------------------------------

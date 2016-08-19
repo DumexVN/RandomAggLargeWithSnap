@@ -863,8 +863,8 @@ void TGnuPlot::CreatePlotFile(const TStr& Comment) {
 void TGnuPlot::RunGnuPlot() const {
   TStr GpFNm, GpPath;
   #if defined(GLib_WIN)
-    GpFNm = "gnuplot.exe";
-    GpPath = "C:\\gnuplot\\bin\\";
+    GpFNm = "wgnuplot.exe";
+    GpPath = "C:\\gnuplot\\";
   #elif defined(GLib_CYGWIN)
     GpFNm = "gnuplot.exe";
     GpPath = "/usr/bin/";

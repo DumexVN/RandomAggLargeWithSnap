@@ -20,6 +20,7 @@ DEFINES -= UNICODE
 SOURCES += main.cpp \
     vertex.cpp \
     edge.cpp \
+    mygraph.cpp \
     include/snap/glib-core/app.cpp \
     include/snap/glib-core/base.cpp \
     include/snap/glib-core/bd.cpp \
@@ -82,12 +83,12 @@ SOURCES += main.cpp \
     include/snap/snap-core/statplot.cpp \
     include/snap/snap-core/subgraph.cpp \
     include/snap/snap-core/timenet.cpp \
-    include/snap/snap-core/util.cpp \
-    mygraph.cpp
+    include/snap/snap-core/util.cpp
 
 HEADERS += \
     vertex.h \
     edge.h \
+    mygraph.h \
     include/snap/glib-core/app.h \
     include/snap/glib-core/base.h \
     include/snap/glib-core/bd.h \
@@ -162,8 +163,7 @@ HEADERS += \
     include/snap/snap-core/subgraph.h \
     include/snap/snap-core/timenet.h \
     include/snap/snap-core/triad.h \
-    include/snap/snap-core/util.h \
-    mygraph.h
+    include/snap/snap-core/util.h
 
 INCLUDEPATH += "C:\Boost\boost_1_56_0"
 INCLUDEPATH += C:\Users\Dumex\Qt_WorkingSpace\RandomAggLargeWithSnap\include\snap\snap-core

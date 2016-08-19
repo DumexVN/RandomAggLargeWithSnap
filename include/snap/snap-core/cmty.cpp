@@ -69,7 +69,7 @@ double CommunityGirvanNewman(PUNGraph& Graph, TCnComV& CmtyV) {
     const double Q = TSnapDetail::_GirvanNewmanGetModularity(Graph, OutDegH, NEdges, CurCmtyV);
 //   / printf("current modularity: %f\n", Q);
     if (Q > BestQ) {
-      BestQ = Q; 
+      BestQ = Q;
       CmtyV.Swap(CurCmtyV);
     }
     if (Cmty1.Len()==0 || Cmty2.Len() == 0) { break; }
@@ -127,15 +127,22 @@ private:
     TIntFltH NIdQH;
     int MxQId;
     TCmtyDat() : MxQId(-1) { }
-    TCmtyDat(const double& NodeDegFrac, const int& OutDeg) : 
+    TCmtyDat(const double& NodeDegFrac, const int& OutDeg) :
       DegFrac(NodeDegFrac), NIdQH(OutDeg), MxQId(-1) { }
-    void AddQ(const int& NId, const double& Q) { NIdQH.AddDat(NId, Q);
-      if (MxQId==-1 || NIdQH[MxQId]<Q) { MxQId=NIdQH.GetKeyId(NId); } }
-    void UpdateMaxQ() { MxQId=-1; 
-      for (int i = -1; NIdQH.FNextKeyId(i); ) { 
-        if (MxQId==-1 || NIdQH[MxQId]< NIdQH[i]) { MxQId=i; } } }
-    void DelLink(const int& K) { const int NId=GetMxQNId(); 
-      NIdQH.DelKey(K); if (NId==K) { UpdateMaxQ(); }  }
+    void AddQ(const int& NId, const double& Q) {
+      NIdQH.AddDat(NId, Q);
+      if (MxQId == -1 || NIdQH[MxQId]<Q) { MxQId = NIdQH.GetKeyId(NId); }
+    }
+    void UpdateMaxQ() {
+      MxQId = -1;
+      for (int i = -1; NIdQH.FNextKeyId(i);) {
+        if (MxQId == -1 || NIdQH[MxQId]< NIdQH[i]) { MxQId = i; }
+      }
+    }
+    void DelLink(const int& K) {
+      const int NId = GetMxQNId();
+      NIdQH.DelKey(K); if (NId == K) { UpdateMaxQ(); }
+    }
     int GetMxQNId() const { return NIdQH.GetKey(MxQId); }
     double GetMxQ() const { return NIdQH[MxQId]; }
   };
@@ -145,10 +152,12 @@ private:
   TUnionFind CmtyIdUF;
   double Q;
 public:
-  TCNMQMatrix(const PUNGraph& Graph) : CmtyQH(Graph->GetNodes()), 
-    MxQHeap(Graph->GetNodes()), CmtyIdUF(Graph->GetNodes()) { Init(Graph); }
+  TCNMQMatrix(const PUNGraph& Graph) : CmtyQH(Graph->GetNodes()),
+    MxQHeap(Graph->GetNodes()), CmtyIdUF(Graph->GetNodes()) {
+    Init(Graph);
+  }
   void Init(const PUNGraph& Graph) {
-    const double M = 0.5/Graph->GetEdges(); // 1/2m
+    const double M = 0.5 / Graph->GetEdges(); // 1/2m
     Q = 0.0;
     for (TUNGraph::TNodeI NI = Graph->BegNI(); NI < Graph->EndNI(); NI++) {
       CmtyIdUF.Add(NI.GetId());
@@ -162,7 +171,8 @@ public:
       }
       Q += -1.0*TMath::Sqr(OutDeg*M);
       if (NI.GetId() < Dat.GetMxQNId()) {
-        MxQHeap.Add(TFltIntIntTr(Dat.GetMxQ(), NI.GetId(), Dat.GetMxQNId())); }
+        MxQHeap.Add(TFltIntIntTr(Dat.GetMxQ(), NI.GetId(), Dat.GetMxQNId()));
+      }
     }
     MxQHeap.MakeHeap();
   }
@@ -170,12 +180,13 @@ public:
     while (true) {
       if (MxQHeap.Empty()) { break; }
       const TFltIntIntTr TopQ = MxQHeap.PopHeap();
-      if (! CmtyQH.IsKey(TopQ.Val2) || ! CmtyQH.IsKey(TopQ.Val3)) { continue; }
-      if (TopQ.Val1!=CmtyQH.GetDat(TopQ.Val2).GetMxQ() && TopQ.Val1!=CmtyQH.GetDat(TopQ.Val3).GetMxQ()) { continue; }
+      if (!CmtyQH.IsKey(TopQ.Val2) || !CmtyQH.IsKey(TopQ.Val3)) { continue; }
+      if (TopQ.Val1 != CmtyQH.GetDat(TopQ.Val2).GetMxQ() && TopQ.Val1 != CmtyQH.GetDat(TopQ.Val3).GetMxQ()) { continue; }
       return TopQ;
     }
     return TFltIntIntTr(-1, -1, -1);
   }
+
   bool MergeBestQ() {
     const TFltIntIntTr TopQ = FindMxQEdge();
     if (TopQ.Val1 <= 0.0) { return false; }
@@ -191,23 +202,23 @@ public:
       const int K = DatJ.NIdQH.GetKey(i);
       TCmtyDat& DatK = CmtyQH.GetDat(K);
       double NewQ = DatJ.NIdQH[i];
-      if (DatI.NIdQH.IsKey(K)) { NewQ = NewQ+DatI.NIdQH.GetDat(K);  DatK.DelLink(I); }     // K connected to I and J
-      else { NewQ = NewQ-2*DatI.DegFrac*DatK.DegFrac; }  // K connected to J not I
+      if (DatI.NIdQH.IsKey(K)) { NewQ = NewQ + DatI.NIdQH.GetDat(K);  DatK.DelLink(I); }     // K connected to I and J
+      else { NewQ = NewQ - 2 * DatI.DegFrac*DatK.DegFrac; }  // K connected to J not I
       DatJ.AddQ(K, NewQ);
       DatK.AddQ(J, NewQ);
-      MxQHeap.PushHeap(TFltIntIntTr(NewQ, TMath::Mn(J,K), TMath::Mx(J,K)));
+      MxQHeap.PushHeap(TFltIntIntTr(NewQ, TMath::Mn(J, K), TMath::Mx(J, K)));
     }
     for (int i = -1; DatI.NIdQH.FNextKeyId(i); ) {
       const int K = DatI.NIdQH.GetKey(i);
-      if (! DatJ.NIdQH.IsKey(K)) { // K connected to I not J
+      if (!DatJ.NIdQH.IsKey(K)) { // K connected to I not J
         TCmtyDat& DatK = CmtyQH.GetDat(K);
-        const double NewQ = DatI.NIdQH[i]-2*DatJ.DegFrac*DatK.DegFrac; 
+        const double NewQ = DatI.NIdQH[i] - 2 * DatJ.DegFrac*DatK.DegFrac;
         DatJ.AddQ(K, NewQ);
         DatK.DelLink(I);
         DatK.AddQ(J, NewQ);
-        MxQHeap.PushHeap(TFltIntIntTr(NewQ, TMath::Mn(J,K), TMath::Mx(J,K)));
+        MxQHeap.PushHeap(TFltIntIntTr(NewQ, TMath::Mn(J, K), TMath::Mx(J, K)));
       }
-    } 
+    }
     DatJ.DegFrac += DatI.DegFrac; }
     if (DatJ.NIdQH.Empty()) { CmtyQH.DelKey(J); } // isolated community (done)
     CmtyQH.DelKey(I);
@@ -216,11 +227,11 @@ public:
   static double CmtyCMN(const PUNGraph& Graph, TCnComV& CmtyV) {
     TCNMQMatrix QMatrix(Graph);
     // maximize modularity
-    while (QMatrix.MergeBestQ()) { }
+    while (QMatrix.MergeBestQ()) {}
     // reconstruct communities
     THash<TInt, TIntV> IdCmtyH;
     for (TUNGraph::TNodeI NI = Graph->BegNI(); NI < Graph->EndNI(); NI++) {
-      IdCmtyH.AddDat(QMatrix.CmtyIdUF.Find(NI.GetId())).Add(NI.GetId()); 
+      IdCmtyH.AddDat(QMatrix.CmtyIdUF.Find(NI.GetId())).Add(NI.GetId());
     }
     CmtyV.Gen(IdCmtyH.Len());
     for (int j = 0; j < IdCmtyH.Len(); j++) {
