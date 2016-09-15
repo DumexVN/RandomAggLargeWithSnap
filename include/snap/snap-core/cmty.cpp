@@ -67,7 +67,7 @@ double CommunityGirvanNewman(PUNGraph& Graph, TCnComV& CmtyV) {
   while (true) {
     TSnapDetail::CmtyGirvanNewmanStep(Graph, Cmty1, Cmty2);
     const double Q = TSnapDetail::_GirvanNewmanGetModularity(Graph, OutDegH, NEdges, CurCmtyV);
-//   / printf("current modularity: %f\n", Q);
+    printf("current modularity: %f\n", Q);
     if (Q > BestQ) {
       BestQ = Q;
       CmtyV.Swap(CurCmtyV);
@@ -157,6 +157,7 @@ public:
     Init(Graph);
   }
   void Init(const PUNGraph& Graph) {
+
     const double M = 0.5 / Graph->GetEdges(); // 1/2m
     Q = 0.0;
     for (TUNGraph::TNodeI NI = Graph->BegNI(); NI < Graph->EndNI(); NI++) {

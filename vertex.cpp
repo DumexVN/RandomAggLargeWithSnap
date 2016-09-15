@@ -44,7 +44,9 @@ void Vertex::addAdj(const quint32 &index)
     if (!myNeighbours.contains(index))
         myNeighbours.append(index);
     else
-        qDebug() << "NEIGHBOUR ALREADY EXISTS, SKIPPING";
+    {
+      //  qDebug() << "NEIGHBOUR ALREADY EXISTS, SKIPPING";
+    }
 }
 
 quint32 Vertex::getNumAdj() const

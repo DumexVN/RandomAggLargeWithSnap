@@ -417,7 +417,7 @@ protected:
   TVal* ValT;     //!< Pointer to the memory where the elements of the vector are stored.
   /// Resizes the vector so that it can store at least \c _MxVals.
   void Resize(const TSizeTy& _MxVals=-1);
-  /// Constructs the out of bounds error message.
+  /// Constructs the out of bounds message.
   TStr GetXOutOfBoundsErrMsg(const TSizeTy& ValN) const;
 public:
   TVec(): MxVals(0), Vals(0), ValT(NULL){}

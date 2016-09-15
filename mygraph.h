@@ -26,6 +26,7 @@ public:
     //
     void read_GML_file(QString filePath);
     void load_LFR_groundTruth();
+    void load_LFR_graph();
     void read_Gephi_graph_and_produce_super_graph(QString filePath);
     void Gephi_parse_ModularityClass(int noClass);
     void save_edge_file_from_GML();
@@ -62,6 +63,7 @@ public:
     void random_aggregate();
     void reverse_random_aggregate();
     void random_aggregate_with_degree_comparison();
+    void reverse_random_aggregate_with_degree_comparison();
     void random_aggregate_with_weight_comparison();
     void random_aggregate_with_neighbour_initial_degree_bias();
     void random_aggregate_with_neighbour_initial_degree_bias_with_constraint();
@@ -99,9 +101,9 @@ public:
     //quality
     QList<double> LARGE_compute_Pairwise_efficient(int n);
     double LARGE_compute_Newman_fraction_of_classified();
+    bool locate_file_in_dir(QString &fileName);
 private:
     void assign_vertex_to_its_ground_truth_comm();
-    bool locate_file_in_dir(QString &fileName);
     int get_number_from_filename(QString filename);
     void generate_base_graph_file(QString dirPath);
     QList<quint32> RGB_converter(quint32 hex);
@@ -119,7 +121,10 @@ private:
     void large_process_overlap_by_merge_intersection();
     void large_graph_parse_result();
     void large_parse_retain_result();
+    void parse_LFR_groundTruth();
     void parse_LFR_groundTruth(QString filepath, int level);
+    void record_time_and_number_of_cluster(int AlgorithmType, int t, int c);
+    void create_time_and_number_of_cluster_file();
     void print_result_stats();
     void print_single_community_inGraphML(const QList<quint32> &com, int k);
     void print_multiple_communities_inGraphML(const QList<quint32> &list);

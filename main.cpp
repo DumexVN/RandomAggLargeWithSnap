@@ -21,12 +21,16 @@ enum RandomAgg { I_a, I_b, I_c,
                  II_a, II_a_i, II_b, II_b_i, II_c, II_d, II_e, II_f, II_g, II_h,
                  III_a, III_b, III_c, III_d, III_e,
                  GN_Clustering, CNM_Clustering,
+                 R1a,
+                 I_x,
                  RFD
                };
 const char *name[] = { "I.a", "I.b", "I_c",
                        "II.a", "II.a.i", "II.b", "II.b.i", "II.c", "II.d", "II.e", "II.f", "II.g", "II.h",
                        "III.a", "III.b", "III.c"," III.d", "III.e",
                        "GN_Clustering", "CNM_Clustering",
+                       "R1a",
+                       "I_x",
                        "RFD"
                      };
 /** Override Debug Message Handler
@@ -71,7 +75,7 @@ void writeEdgeFile(const Graph &G)
 void writeSeperateFile(QString fileName, const QList<QList<double> > &matrix)
 {
     qDebug() << "Writing File";
-    QFile file("C:/Users/Dumex/Desktop/SocialNetworksCollection/GirvanNewmanExperiment/" + fileName + ".txt");
+    QFile file(workingDir + fileName + ".txt");
     file.open(QFile::WriteOnly | QFile::Text);
     QTextStream out(&file);
     out.setRealNumberPrecision(4);
@@ -81,10 +85,10 @@ void writeSeperateFile(QString fileName, const QList<QList<double> > &matrix)
         QString str;
         for (int j = 0; j < w; j++)
         {
-            str.append(QString::number(matrix[i][j])).append('\t');
+            str.append(QString::number(matrix[i][j])).append('/t');
         }
         out << str;
-        out << '\n';
+        out << '/n';
     }
     file.close();
 }
@@ -120,31 +124,32 @@ void plotMatrix(const QList<QList<double> > &matrix, QString str)
         else if (i == 2)lab+= "_TypeIII";
         else lab+= "_Best";
         TGnuPlot Gp(lab, plot_desc);
+        Gp.SetYRange(-0.5,1.0);
         plotV.Add(Gp);
     }
     //plot
     for(int i = 0; i < AllSeries.Len(); i++)
     {
-        if (i <= RandomAgg::I_c) plotV[0].AddPlot(AllSeries[i], gpwLinesPoints, name[i]);
+        if (i <= RandomAgg::I_c || i == RandomAgg::R1a || i == RandomAgg::I_x) plotV[0].AddPlot(AllSeries[i], gpwLinesPoints, name[i]);
         else if (i > RandomAgg::I_c && i <= RandomAgg::II_h) plotV[1].AddPlot(AllSeries[i], gpwLinesPoints, name[i]);
         else if (i > RandomAgg::II_h && i <= RandomAgg::III_e) plotV[2].AddPlot(AllSeries[i], gpwLinesPoints, name[i]);
-        else
-        {
-            plotV[3].AddPlot(AllSeries[RandomAgg::I_c], gpwLinesPoints, name[RandomAgg::I_c]);
-            plotV[3].AddPlot(AllSeries[RandomAgg::II_g], gpwLinesPoints, name[RandomAgg::II_g]);
-            plotV[3].AddPlot(AllSeries[RandomAgg::III_a], gpwLinesPoints, name[RandomAgg::III_a]);
-            plotV[3].AddPlot(AllSeries[RandomAgg::III_e], gpwLinesPoints, name[RandomAgg::III_e]);
-            plotV[3].AddPlot(AllSeries[RandomAgg::GN_Clustering], gpwLinesPoints, name[RandomAgg::GN_Clustering]);
-        }
+        else {}
     }
     //plot the best
+    plotV[3].AddPlot(AllSeries[RandomAgg::I_c], gpwLinesPoints, name[RandomAgg::I_c]);
+    plotV[3].AddPlot(AllSeries[RandomAgg::II_g], gpwLinesPoints, name[RandomAgg::II_g]);
+    plotV[3].AddPlot(AllSeries[RandomAgg::III_a], gpwLinesPoints, name[RandomAgg::III_a]);
+    plotV[3].AddPlot(AllSeries[RandomAgg::III_e], gpwLinesPoints, name[RandomAgg::III_e]);
+    plotV[3].AddPlot(AllSeries[RandomAgg::GN_Clustering], gpwLinesPoints, name[RandomAgg::GN_Clustering]);
+    plotV[3].AddPlot(AllSeries[RandomAgg::CNM_Clustering], gpwLinesPoints, name[RandomAgg::CNM_Clustering]);
+     plotV[3].AddPlot(AllSeries[RandomAgg::RFD], gpwLinesPoints, name[RandomAgg::RFD]);
 
     //export as png
     for (int i = 0; i < plotV.Len();i++)
     {
         TGnuPlot Gp = plotV[i];
         Gp.SetXYLabel("Z_out", label);
-        Gp.SavePng();
+        Gp.SavePng(label);
     }
 }
 
@@ -165,7 +170,7 @@ void plotIntMatrix(const QList<QList<int> > &matrix, QString str)
             TPair<TInt, TInt> p((i+1)*5, matrix[i][j]); //for continous x i.e. GN Experiment
             XY.Add(p);
         }
-         printf("XY:%d\n", XY.Len() );
+        // printf("XY:%d/n", XY.Len() );
         AllSeries.Add(XY);
     }
     //set plot desription
@@ -183,6 +188,8 @@ void plotIntMatrix(const QList<QList<int> > &matrix, QString str)
         plotV.Add(Gp);
     }
     //plot
+    plotV[3].AddPlot(AllSeries[0], gpwLinesPoints, name[RandomAgg::RFD]);
+    /*
     for(int i = 0; i < AllSeries.Len(); i++)
     {
         if (i <= RandomAgg::I_c) plotV[0].AddPlot(AllSeries[i], gpwLinesPoints, name[i]);
@@ -190,16 +197,16 @@ void plotIntMatrix(const QList<QList<int> > &matrix, QString str)
         else if (i > RandomAgg::II_h && i <= RandomAgg::III_e) plotV[2].AddPlot(AllSeries[i], gpwLinesPoints, name[i]);
         else
         {
-            plotV[3].AddPlot(AllSeries[RandomAgg::I_c], gpwLinesPoints, name[RandomAgg::I_c]);
+          //  plotV[3].AddPlot(AllSeries[RandomAgg::I_c], gpwLinesPoints, name[RandomAgg::I_c]);
             plotV[3].AddPlot(AllSeries[RandomAgg::RFD], gpwLinesPoints, name[RandomAgg::RFD]);
          //   plotV[3].AddPlot(AllSeries[RandomAgg::II_g], gpwLinesPoints, name[RandomAgg::II_g]);
-            plotV[3].AddPlot(AllSeries[RandomAgg::III_a], gpwLinesPoints, name[RandomAgg::III_a]);
-            plotV[3].AddPlot(AllSeries[RandomAgg::III_e], gpwLinesPoints, name[RandomAgg::III_e]);
+         //   plotV[3].AddPlot(AllSeries[RandomAgg::III_a], gpwLinesPoints, name[RandomAgg::III_a]);
+         //   plotV[3].AddPlot(AllSeries[RandomAgg::III_e], gpwLinesPoints, name[RandomAgg::III_e]);
          //   plotV[3].AddPlot(AllSeries[RandomAgg::GN_Clustering], gpwLinesPoints, name[RandomAgg::GN_Clustering]);
          //   plotV[3].AddPlot(AllSeries[RandomAgg::CNM_Clustering], gpwLinesPoints, name[RandomAgg::CNM_Clustering]);
         }
     }
-    //plot the best
+    //plot the best*/
 
     //export as png
     for (int i = 0; i < plotV.Len();i++)
@@ -215,41 +222,44 @@ void plotIntMatrix(const QList<QList<int> > &matrix, QString str)
  */
 void GN_experiment()
 {
-    int n = 10000, m = 4, n_per_c = n/m, neighbours = n_per_c - 1, outer = n_per_c*3;
+    int n = 128, m = 4, n_per_c = n/m, neighbours = n_per_c - 1, outer = n_per_c*3;
     QList<QList<double> > RAND, JACCARD, ARI, Q, GN;
     for (int z_out = 0 ; z_out <= 12; z_out++)
     {
         QList<double> sRAND, sJACCARD, sARI, sQ, sGN; //s = Set
-        for (int k = 0; k <= 17; k++)
+        for (int k = 0; k <= 22; k++)
         {
             //generate GN graph
             //run algorithm here
             double p_in = 0.0, p_out = 0.0;
             p_out = (double) z_out/outer;
             p_in = (double) (16-z_out)/neighbours;
-            int times = 20;
+            int times = 50;
             double iRAND = 0.0 , iJACCARD = 0.0, iARI = 0.0, iQ = 0.0, iGN = 0.0; // i = iterator
             QString mess;
-            if (k == 0) {mess.append(QString("********** I.a ************ \n"));}
-            else if (k == 1) {mess.append(QString( "********** I.b ************ \n"));}
-            else if (k == 2) {mess.append(QString( "********** I.c ************ \n"));}
-            else if (k == 3) {mess.append(QString( "********** II.a ************ \n"));}
-            else if (k == 4){mess.append(QString( "********** II.a(i) ************ \n"));}
-            else if (k == 5) {mess.append(QString( "********** II.b ************ \n"));}
-            else if (k == 6){mess.append(QString( "********** II.b(i) ************ \n"));}
-            else if (k == 7) {mess.append(QString( "********** II.c ************ \n"));}
-            else if (k == 8) {mess.append(QString( "********** II.d ************ \n"));}
-            else if (k == 9) {mess.append(QString( "********** II.e ************ \n"));}
-            else if (k == 10) {mess.append(QString( "********** II.f ************ \n"));}
-            else if (k == 11) {mess.append(QString( "********** II.h ************ \n"));}
-            else if (k == 12){mess.append(QString( "********** II.g ************ \n"));}
-            else if (k == 13){mess.append(QString( "********** III.a ************ \n"));}
-            else if (k == 14){mess.append(QString( "********** III.b ************ \n"));}
-            else if (k == 15){mess.append(QString( "********** III.c ************ \n"));}
-            else if (k == 16){mess.append(QString( "********** III.d ************ \n"));}
-            else if (k == 17){mess.append(QString( "********** III.e ************ \n"));}
-            else if (k == 18){mess.append(QString( "********** Betweenness Centrality Clustering ************ \n"));}
-            else if (k == 19){mess.append(QString( "********** CNM Clustering ************ \n"));}
+            if (k == 0) {mess.append(QString("********** I.a ************ /n"));}
+            else if (k == 1) {mess.append(QString( "********** I.b ************ /n"));}
+            else if (k == 2) {mess.append(QString( "********** I.c ************ /n"));}
+            else if (k == 3) {mess.append(QString( "********** II.a ************ /n"));}
+            else if (k == 4){mess.append(QString( "********** II.a(i) ************ /n"));}
+            else if (k == 5) {mess.append(QString( "********** II.b ************ /n"));}
+            else if (k == 6){mess.append(QString( "********** II.b(i) ************ /n"));}
+            else if (k == 7) {mess.append(QString( "********** II.c ************ /n"));}
+            else if (k == 8) {mess.append(QString( "********** II.d ************ /n"));}
+            else if (k == 9) {mess.append(QString( "********** II.e ************ /n"));}
+            else if (k == 10) {mess.append(QString( "********** II.f ************ /n"));}
+            else if (k == 11) {mess.append(QString( "********** II.h ************ /n"));}
+            else if (k == 12){mess.append(QString( "********** II.g ************ /n"));}
+            else if (k == 13){mess.append(QString( "********** III.a ************ /n"));}
+            else if (k == 14){mess.append(QString( "********** III.b ************ /n"));}
+            else if (k == 15){mess.append(QString( "********** III.c ************ /n"));}
+            else if (k == 16){mess.append(QString( "********** III.d ************ /n"));}
+            else if (k == 17){mess.append(QString( "********** III.e ************ /n"));}
+            else if (k == 18){mess.append(QString( "********** Betweenness Centrality Clustering ************ /n")); times = 1;}
+            else if (k == 19){mess.append(QString( "********** CNM Clustering ************ /n")); times = 1;}
+            else if (k == 20){mess.append(QString( "********** R1a ************ /n"));}
+            else if (k == 21){mess.append(QString( "********** I.x ************ /n"));}
+            else if (k == 22){mess.append(QString( "********** RFD ************ /n"));}
             else{}
             for (int i = 0 ; i < times; i++)
             {
@@ -277,14 +287,17 @@ void GN_experiment()
                 else if (k == 17){G.random_aggregate_retain_vertex_using_triangulation_of_cluster();}
                 else if (k == 18){G.betweenness_centrality_clustering();}
                 else if (k == 19){G.fast_CMN();}
-                QList<double> id = G.LARGE_compute_Pairwise_efficient(-1);
+                else if (k == 20){G.reverse_random_aggregate();}
+                else if (k == 21){G.reverse_random_aggregate_with_degree_comparison();}
+                else if (k == 22){G.random_functional_digraph();}
+                QList<double> id = G.LARGE_compute_Pairwise_efficient(-1); //param -1 set n to |V|
                 iRAND+=id[0];
                 iJACCARD+=id[1];
                 iARI+=id[2];
                 iQ+=G.LARGE_compute_modularity();
+                double gn = G.compute_GN_index();
                 G.LARGE_hard_reset();
-            //    double gn = G.compute_GN_index();
-            //    iGN += gn;
+                iGN += gn;
             }
             //add to list
             double normalisedRand = iRAND/times,
@@ -315,8 +328,8 @@ void GN_experiment()
 
 
 /////////////////////////////////////////////////////////////////////////////////////////
-/// \brief Experiment with COMPLETE GRAPH
-/// \param
+/// /brief Experiment with COMPLETE GRAPH
+/// /param
 ///
 void generateKN(int n)
 {
@@ -333,7 +346,7 @@ void CompleteGraph_Exp()
     QFile file("C:/Users/Dumex/Desktop/SocialNetworksCollection/CompleteGraph/Stat.txt");
     QList<QList<double> > Q;
     QList<QList<int> > CC;
-    for (int n = 1000; n <= 1000; n+= 1000)
+    for (int n = 1000; n <= 5000; n+=1000)
     {
         QList<double> sQ; //s = Set
         QList<int> sCC;
@@ -349,31 +362,31 @@ void CompleteGraph_Exp()
             double iQ = 0.0; // i = iterator
             quint32 iCC = 0;
             QString mess;
-            if (k == 0) {mess.append(QString("********** I.a ************ \n"));}
-            else if (k == 1) {mess.append(QString( "********** I.b ************ \n"));}
-            else if (k == 2) {mess.append(QString( "********** I.c ************ \n"));}
-            else if (k == 3) {mess.append(QString( "********** II.a ************ \n"));}
-            else if (k == 4){mess.append(QString( "********** II.a(i) ************ \n"));}
-            else if (k == 5) {mess.append(QString( "********** II.b ************ \n"));}
-            else if (k == 6){mess.append(QString( "********** II.b(i) ************ \n"));}
-            else if (k == 7) {mess.append(QString( "********** II.c ************ \n"));}
-            else if (k == 8) {mess.append(QString( "********** II.d ************ \n"));}
-            else if (k == 9) {mess.append(QString( "********** II.e ************ \n"));}
-            else if (k == 10) {mess.append(QString( "********** II.f ************ \n"));}
-            else if (k == 11) {mess.append(QString( "********** II.g ************ \n"));}
-            else if (k == 12){mess.append(QString( "********** II.h ************ \n"));}
-            else if (k == 13){mess.append(QString( "********** III.a ************ \n"));}
-            else if (k == 14){mess.append(QString( "********** III.b ************ \n"));}
-            else if (k == 15){mess.append(QString( "********** III.c ************ \n"));}
-            else if (k == 16){mess.append(QString( "********** III.d ************ \n"));}
-            else if (k == 17){mess.append(QString( "********** III.e ************ \n"));}
-            else if (k == 18){mess.append(QString( "********** Betweenness Centrality Clustering ************ \n")); times = 1;}
-            else if (k == 19){mess.append(QString( "********** Random Functional Digraph *************** \n"));}
+            if (k == 0) {mess.append(QString("********** I.a ************ /n"));}
+            else if (k == 1) {mess.append(QString( "********** I.b ************ /n"));}
+            else if (k == 2) {mess.append(QString( "********** I.c ************ /n"));}
+            else if (k == 3) {mess.append(QString( "********** II.a ************ /n"));}
+            else if (k == 4){mess.append(QString( "********** II.a(i) ************ /n"));}
+            else if (k == 5) {mess.append(QString( "********** II.b ************ /n"));}
+            else if (k == 6){mess.append(QString( "********** II.b(i) ************ /n"));}
+            else if (k == 7) {mess.append(QString( "********** II.c ************ /n"));}
+            else if (k == 8) {mess.append(QString( "********** II.d ************ /n"));}
+            else if (k == 9) {mess.append(QString( "********** II.e ************ /n"));}
+            else if (k == 10) {mess.append(QString( "********** II.f ************ /n"));}
+            else if (k == 11) {mess.append(QString( "********** II.g ************ /n"));}
+            else if (k == 12){mess.append(QString( "********** II.h ************ /n"));}
+            else if (k == 13){mess.append(QString( "********** III.a ************ /n"));}
+            else if (k == 14){mess.append(QString( "********** III.b ************ /n"));}
+            else if (k == 15){mess.append(QString( "********** III.c ************ /n"));}
+            else if (k == 16){mess.append(QString( "********** III.d ************ /n"));}
+            else if (k == 17){mess.append(QString( "********** III.e ************ /n"));}
+            else if (k == 18){mess.append(QString( "********** Betweenness Centrality Clustering ************ /n")); times = 1;}
+            else if (k == 19){mess.append(QString( "********** Random Functional Digraph *************** /n"));}
             else{}
             for (int i = 0 ; i < times; i++)
             {
-                if (k == 0) {G.random_aggregate();}
-                else if (k == 1) {G.random_aggregate_with_degree_comparison(); }
+                if (k == 0) {continue;G.random_aggregate();}
+                else if (k == 1) {continue;G.random_aggregate_with_degree_comparison(); }
                 else if (k == 2) {continue;G.random_aggregate_with_weight_comparison(); }
                 else if (k == 3) {continue;G.random_aggregate_with_neighbour_initial_degree_bias(); }
                 else if (k == 4){continue;G.random_aggregate_with_neighbour_initial_degree_bias_with_constraint();}
@@ -385,11 +398,11 @@ void CompleteGraph_Exp()
                 else if (k == 10) {continue;G.random_aggregate_probabilistic_candidate_with_minimum_weight_neighbour();}
                 else if (k == 11) {continue;G.random_aggregate_greedy_max_degree();}
                 else if (k == 12){continue;G.random_aggregate_greedy_max_weight();}
-                else if (k == 13){G.random_aggregate_retain_vertex_using_triangulation();}
-                else if (k == 14){G.random_aggregate_retain_vertex_using_probabilistic_triangulation();}
-                else if (k == 15){G.random_aggregate_with_highest_triangulated_vertex();}
-                else if (k == 16){G.random_aggregate_retain_vertex_using_triangulation_times_weight();}
-                else if (k == 17){G.random_aggregate_retain_vertex_using_triangulation_of_cluster();}
+                else if (k == 13){continue;G.random_aggregate_retain_vertex_using_triangulation();}
+                else if (k == 14){continue;G.random_aggregate_retain_vertex_using_probabilistic_triangulation();}
+                else if (k == 15){continue;G.random_aggregate_with_highest_triangulated_vertex();}
+                else if (k == 16){continue;G.random_aggregate_retain_vertex_using_triangulation_times_weight();}
+                else if (k == 17){continue;G.random_aggregate_retain_vertex_using_triangulation_of_cluster();}
                 else if (k == 18){continue;G.betweenness_centrality_clustering();}
                 else if (k == 19){G.random_functional_digraph();}
                 double q = G.LARGE_compute_modularity();
@@ -404,7 +417,7 @@ void CompleteGraph_Exp()
             //write to file
             file.open(QFile::Text | QFile::Append);
             QTextStream out(&file);
-            mess.append(QString("%1\t%2\t%3\t%4\t%5\t%6\n").arg(normalisedQ).arg(normalisedCC).arg(n));
+            mess.append(QString("%1/t%2/t%3/t%4/t%5/t%6/n").arg(normalisedQ).arg(normalisedCC).arg(n));
             out << mess;
             file.close();
         }
@@ -419,8 +432,8 @@ void CompleteGraph_Exp()
 
 
 /////////////////////////////////////////////////////////////////////////////////////////
-/// \brief Experiment with K Circulant Graph
-/// \param k
+/// /brief Experiment with K Circulant Graph
+/// /param k
 ///
 void generate_K_circulant(const int &k)
 {
@@ -455,25 +468,25 @@ void K_circulant_experiment()
             double iQ = 0.0; // i = iterator
             quint32 iCC = 0;
             QString mess;
-            if (k == 0) {mess.append(QString("********** I.a ************ \n"));}
-            else if (k == 1) {mess.append(QString( "********** I.b ************ \n"));}
-            else if (k == 2) {mess.append(QString( "********** I.c ************ \n"));}
-            else if (k == 3) {mess.append(QString( "********** II.a ************ \n"));}
-            else if (k == 4){mess.append(QString( "********** II.a(i) ************ \n"));}
-            else if (k == 5) {mess.append(QString( "********** II.b ************ \n"));}
-            else if (k == 6){mess.append(QString( "********** II.b(i) ************ \n"));}
-            else if (k == 7) {mess.append(QString( "********** II.c ************ \n"));}
-            else if (k == 8) {mess.append(QString( "********** II.d ************ \n"));}
-            else if (k == 9) {mess.append(QString( "********** II.e ************ \n"));}
-            else if (k == 10) {mess.append(QString( "********** II.f ************ \n"));}
-            else if (k == 11) {mess.append(QString( "********** II.g ************ \n"));}
-            else if (k == 12){mess.append(QString( "********** II.h ************ \n"));}
-            else if (k == 13){mess.append(QString( "********** III.a ************ \n"));}
-            else if (k == 14){mess.append(QString( "********** III.b ************ \n"));}
-            else if (k == 15){mess.append(QString( "********** III.c ************ \n"));}
-            else if (k == 16){mess.append(QString( "********** III.d ************ \n"));}
-            else if (k == 17){mess.append(QString( "********** III.e ************ \n"));}
-            else if (k == 18){mess.append(QString( "********** Betweenness Centrality Clustering ************ \n")); times = 1;}
+            if (k == 0) {mess.append(QString("********** I.a ************ /n"));}
+            else if (k == 1) {mess.append(QString( "********** I.b ************ /n"));}
+            else if (k == 2) {mess.append(QString( "********** I.c ************ /n"));}
+            else if (k == 3) {mess.append(QString( "********** II.a ************ /n"));}
+            else if (k == 4){mess.append(QString( "********** II.a(i) ************ /n"));}
+            else if (k == 5) {mess.append(QString( "********** II.b ************ /n"));}
+            else if (k == 6){mess.append(QString( "********** II.b(i) ************ /n"));}
+            else if (k == 7) {mess.append(QString( "********** II.c ************ /n"));}
+            else if (k == 8) {mess.append(QString( "********** II.d ************ /n"));}
+            else if (k == 9) {mess.append(QString( "********** II.e ************ /n"));}
+            else if (k == 10) {mess.append(QString( "********** II.f ************ /n"));}
+            else if (k == 11) {mess.append(QString( "********** II.g ************ /n"));}
+            else if (k == 12){mess.append(QString( "********** II.h ************ /n"));}
+            else if (k == 13){mess.append(QString( "********** III.a ************ /n"));}
+            else if (k == 14){mess.append(QString( "********** III.b ************ /n"));}
+            else if (k == 15){mess.append(QString( "********** III.c ************ /n"));}
+            else if (k == 16){mess.append(QString( "********** III.d ************ /n"));}
+            else if (k == 17){mess.append(QString( "********** III.e ************ /n"));}
+            else if (k == 18){mess.append(QString( "********** Betweenness Centrality Clustering ************ /n")); times = 1;}
             else{}
             for (int i = 0 ; i < times; i++)
             {
@@ -508,7 +521,7 @@ void K_circulant_experiment()
             //write to file
             file.open(QFile::Text | QFile::Append);
             QTextStream out(&file);
-            mess.append(QString("%1\t%2\t%3\t%4\t%5\t%6\n").arg(normalisedQ).arg(normalisedCC).arg(NodeOutDeg));
+            mess.append(QString("%1/t%2/t%3/t%4/t%5/t%6/n").arg(normalisedQ).arg(normalisedCC).arg(NodeOutDeg));
             out << mess;
             file.close();
         }
@@ -522,9 +535,9 @@ void K_circulant_experiment()
 
 
 //////////////////////////////////////////////////////////////////////////////////////////
-/// \brief Experiment with Simple Cycle
-/// \param n
-/// \return
+/// /brief Experiment with Simple Cycle
+/// /param n
+/// /return
 ///
 int RandomMappingOnACycle(const int& n)
 {
@@ -575,14 +588,14 @@ void RandomMappingOnACycle_Exp()
 {
     Graph G;
     G.manual_set_working_dir(workingDir);
-    int n = 1024;
-    TVec<TPair<TInt, TInt> > RM, Ia, Ib, Ia_i, IIa, IIb,  IIc, IId, IIe, IIf, IIg, IIh;
-    while (n <= 5000)
+    int n = 10;
+    TVec<TPair<TInt, TInt> > RM, Ia, Ib, Ia_i,Ix;
+    while (n <= 20000)
     {
         G.generateSimpleCycle(n);
         writeEdgeFile(G);
-        int times = 10;
-        for (int k = 0; k <= 11; k++)
+        int times = 50;
+        for (int k = 0; k <= 4; k++)
         {
             int sum_cc = 0;
             for (int i = 0 ; i < times; i++)
@@ -590,16 +603,9 @@ void RandomMappingOnACycle_Exp()
                 int cc = 0;
                 if (k == 0) {G.random_aggregate();}
                 else if (k == 1) {G.random_aggregate_with_degree_comparison(); }
-                else if (k == 2) {G.reverse_random_aggregate(); } //replaced Ic
-                else if (k == 3) {G.random_aggregate_with_neighbour_initial_degree_bias(); }
-                else if (k == 4) {G.random_aggregate_with_neighbour_CURRENT_degree_bias(); }
-                else if (k == 5) {G.random_aggregate_highest_CURRENT_degree_neighbour();}
-                else if (k == 6) {G.random_aggregate_with_minimum_weight_neighbour();}
-                else if (k == 7) {G.random_aggregate_probabilistic_lowest_degree_neighbour_destructive();}
-                else if (k == 8) {G.random_aggregate_probabilistic_candidate_with_minimum_weight_neighbour();}
-                else if (k == 9) {G.random_aggregate_greedy_max_weight();}
-                else if (k == 10){G.random_aggregate_greedy_max_degree();}
-                else if (k == 11){cc = RandomMappingOnACycle(n);
+                else if (k == 2) {G.reverse_random_aggregate(); } //R1A
+                else if (k == 3) {G.reverse_random_aggregate_with_degree_comparison();} //I.x
+                else if (k == 4){cc = RandomMappingOnACycle(n); //RFD
                     if (cc == -1){qDebug() << "ERROR!, Terminating ..."; return;}
                     else{sum_cc += cc;continue;}
                 }
@@ -613,15 +619,8 @@ void RandomMappingOnACycle_Exp()
             if (k == 0) {Ia.Add(p);}
             else if (k == 1) {Ib.Add(p);}
             else if (k == 2) {Ia_i.Add(p); } // replaced Ic
-            else if (k == 3) {IIa.Add(p); }
-            else if (k == 4){IIb.Add(p);}
-            else if (k == 5) {IIc.Add(p); }
-            else if (k == 6){IId.Add(p);}
-            else if (k == 7) {IIe.Add(p);}
-            else if (k == 8) {IIf.Add(p);}
-            else if (k == 9) {IIg.Add(p);}
-            else if (k == 10) {IIh.Add(p);}
-            else if (k == 11){RM.Add(p);}
+            else if (k == 3){Ix.Add(p);}
+            else if (k == 4){RM.Add(p);}
         }
         G.LARGE_hard_reset();
         n+=500;
@@ -630,24 +629,16 @@ void RandomMappingOnACycle_Exp()
     Gp.AddPlot(RM,gpwLinesPoints, "Random Mapping");
     Gp.AddPlot(Ia,gpwLinesPoints, "I.a");
     Gp.AddPlot(Ib,gpwLinesPoints, "I.b");
-    //Gp.AddPlot(Ic,gpwLinesPoints, "Ic"); replaced by Ia_i
-    Gp.AddPlot(Ia_i,gpwLinesPoints, "Ia_i");
-    Gp.AddPlot(IIa,gpwLinesPoints, "II.a");
-    Gp.AddPlot(IIb,gpwLinesPoints, "II.b");
-    Gp.AddPlot(IIc,gpwLinesPoints, "II.c");
-    Gp.AddPlot(IId,gpwLinesPoints, "II.d");
-    Gp.AddPlot(IIe,gpwLinesPoints, "II.e");
-    Gp.AddPlot(IIf,gpwLinesPoints, "II.f");
-    Gp.AddPlot(IIg,gpwLinesPoints, "II.g");
-    Gp.AddPlot(IIh,gpwLinesPoints, "II.h");
+    Gp.AddPlot(Ia_i,gpwLinesPoints, "R1A");
+    Gp.AddPlot(Ix,gpwLinesPoints, "I.x");
     Gp.SetXYLabel("n", "Connected Component");
     Gp.SavePng();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////
-/// \brief Experiment with Binary Tree
-/// \param h
-/// \return
+/// /brief Experiment with Binary Tree
+/// /param h
+/// /return
 ///
 int RandomMappingOnBinaryTree(const int &h)
 {
@@ -834,10 +825,250 @@ double xnEx(int n)
     }
     return coeff;
 }
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////
+/// /brief RUN ABOVE EXPERIMENTS WITH PREDETERMINED GRAPHS
+/// /param filepath
+/// /return
+///
+void SocialGraph_exp(const QString &graph_name)
+{
+    QList<QList<double> > RAND, JACCARD, ARI, Q, GN;
+    for (int t = 0 ; t < 1; t++)
+    {
+        QList<double> sRAND, sJACCARD, sARI, sQ, sGN; //s = Set
+        for (int k = 0; k <= 22; k++)
+        {
+            //generate GN graph
+            int times = 10;
+            double iRAND = 0.0 , iJACCARD = 0.0, iARI = 0.0, iQ = 0.0, iGN = 0.0; // i = iterator
+            //run algorithm here
+            QString mess;
+            if (k == 0) {mess.append(QString("********** I.a ************ /n"));}
+            else if (k == 1) {mess.append(QString( "********** I.b ************ /n"));}
+            else if (k == 2) {mess.append(QString( "********** I.c ************ /n"));}
+            else if (k == 3) {mess.append(QString( "********** II.a ************ /n"));}
+            else if (k == 4){mess.append(QString( "********** II.a(i) ************ /n"));}
+            else if (k == 5) {mess.append(QString( "********** II.b ************ /n"));}
+            else if (k == 6){mess.append(QString( "********** II.b(i) ************ /n"));}
+            else if (k == 7) {mess.append(QString( "********** II.c ************ /n"));}
+            else if (k == 8) {mess.append(QString( "********** II.d ************ /n"));}
+            else if (k == 9) {mess.append(QString( "********** II.e ************ /n"));}
+            else if (k == 10) {mess.append(QString( "********** II.f ************ /n"));}
+            else if (k == 11) {mess.append(QString( "********** II.h ************ /n"));}
+            else if (k == 12){mess.append(QString( "********** II.g ************ /n"));}
+            else if (k == 13){mess.append(QString( "********** III.a ************ /n"));}
+            else if (k == 14){mess.append(QString( "********** III.b ************ /n"));}
+            else if (k == 15){mess.append(QString( "********** III.c ************ /n"));}
+            else if (k == 16){mess.append(QString( "********** III.d ************ /n"));}
+            else if (k == 17){mess.append(QString( "********** III.e ************ /n"));}
+            else if (k == 18){mess.append(QString( "********** Betweenness Centrality Clustering ************ /n")); times = 1;}
+            else if (k == 19){mess.append(QString( "********** CNM Clustering ************ /n")); times = 1;}
+            else if (k == 20){mess.append(QString( "********** R1a ************ /n"));}
+            else if (k == 21){mess.append(QString( "********** I.x ************ /n"));}
+            else if (k == 22){mess.append(QString( "********** RFD ************ /n"));}
+            else{}
+            for (int i = 0 ; i < times; i++)
+            {
+                Graph G;
+                G.manual_set_working_dir(workingDir);
+                G.read_edge(workingDir);
+                G.load_ground_truth_communities();
+                if (k == 0) {G.random_aggregate();}
+                else if (k == 1) {G.random_aggregate_with_degree_comparison(); }
+                else if (k == 2) {G.random_aggregate_with_weight_comparison(); }
+                else if (k == 3) {G.random_aggregate_with_neighbour_initial_degree_bias(); }
+                else if (k == 4){G.random_aggregate_with_neighbour_initial_degree_bias_with_constraint();}
+                else if (k == 5) {G.random_aggregate_with_neighbour_CURRENT_degree_bias(); }
+                else if (k == 6){G.random_aggregate_with_neighbour_CURRENT_degree_bias_with_constraint();}
+                else if (k == 7) {G.random_aggregate_highest_CURRENT_degree_neighbour();}
+                else if (k == 8) {G.random_aggregate_with_minimum_weight_neighbour();}
+                else if (k == 9) {G.random_aggregate_probabilistic_lowest_degree_neighbour_destructive();}
+                else if (k == 10) {G.random_aggregate_probabilistic_candidate_with_minimum_weight_neighbour();}
+                else if (k == 11) {G.random_aggregate_greedy_max_weight();}
+                else if (k == 12){G.random_aggregate_greedy_max_degree();}
+                else if (k == 13){G.random_aggregate_retain_vertex_using_triangulation();}
+                else if (k == 14){G.random_aggregate_retain_vertex_using_probabilistic_triangulation();}
+                else if (k == 15){G.random_aggregate_with_highest_triangulated_vertex();}
+                else if (k == 16){G.random_aggregate_retain_vertex_using_triangulation_times_weight();}
+                else if (k == 17){G.random_aggregate_retain_vertex_using_triangulation_of_cluster();}
+                else if (k == 18){G.betweenness_centrality_clustering();}
+                else if (k == 19){G.fast_CMN();}
+                else if (k == 20){G.reverse_random_aggregate();}
+                else if (k == 21){G.reverse_random_aggregate_with_degree_comparison();}
+                else if (k == 22){G.random_functional_digraph();}
+                QList<double> id = G.LARGE_compute_Pairwise_efficient(-1);
+                iRAND+=id[0];
+                iJACCARD+=id[1];
+                iARI+=id[2];
+                iQ+=G.LARGE_compute_modularity();
+               // double gn = G.compute_GN_index();
+                double gn = 0.0;
+                G.LARGE_hard_reset();
+                iGN += gn;
+            }
+            //add to list
+            double normalisedRand = iRAND/times,
+                    normalisedJaccard = iJACCARD/times,
+                    normalisedARI = iARI/times,
+                    normalisedQ = iQ/times,
+                    normalisedGN = (double) iGN/times;
+            sRAND << normalisedRand; sJACCARD << normalisedJaccard; sARI << normalisedARI; sQ << normalisedQ; sGN << normalisedGN;
+            //write to file
+            QFile file(workingDir +"Stat.txt");
+            file.open(QFile::Text | QFile::Append);
+            QTextStream out(&file);
+            mess.append(QString("%1/t%2/t%3/t%4/t%5/t%6/n").arg(normalisedRand).arg(normalisedJaccard).arg(normalisedARI).arg(normalisedQ).arg(normalisedGN).arg(t));
+            out << mess;
+            file.close();
+        }
+        RAND << sRAND; JACCARD << sJACCARD; ARI << sARI; Q << sQ; GN << sGN;
+    }
+    writeSeperateFile(QString("ARI"), ARI);
+    writeSeperateFile(QString("JACCARD"), JACCARD);
+    writeSeperateFile(QString("Q"), Q);
+    writeSeperateFile(QString("GN"), GN);
+    plotMatrix(ARI, QString("ARI"));
+    plotMatrix(JACCARD, QString("Jaccard"));
+    plotMatrix(Q, QString("Q"));
+    plotMatrix(GN, QString("FoCC"));
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////
+/// /brief RUN ABOVE EXPERIMENTS WITH PREDETERMINED GRAPHS
+/// /param filepath
+/// /return
+///
+void LFR_benchmark_exp()
+{
+    QList<QList<double> > RAND, JACCARD, ARI, Q, GN;
+    for (int t = 0 ; t < 1; t++)
+    {
+        QList<double> sRAND, sJACCARD, sARI, sQ, sGN; //s = Set
+        for (int k = 0; k <= 22; k++)
+        {
+            //generate GN graph
+            int times = 10;
+            double iRAND = 0.0 , iJACCARD = 0.0, iARI = 0.0, iQ = 0.0, iGN = 0.0; // i = iterator
+            //run algorithm here
+            QString mess;
+            if (k == 0) {mess.append(QString("********** I.a ************ /n"));}
+            else if (k == 1) {mess.append(QString( "********** I.b ************ /n"));}
+            else if (k == 2) {mess.append(QString( "********** I.c ************ /n"));}
+            else if (k == 3) {mess.append(QString( "********** II.a ************ /n"));}
+            else if (k == 4){mess.append(QString( "********** II.a(i) ************ /n"));}
+            else if (k == 5) {mess.append(QString( "********** II.b ************ /n"));}
+            else if (k == 6){mess.append(QString( "********** II.b(i) ************ /n"));}
+            else if (k == 7) {mess.append(QString( "********** II.c ************ /n"));}
+            else if (k == 8) {mess.append(QString( "********** II.d ************ /n"));}
+            else if (k == 9) {mess.append(QString( "********** II.e ************ /n"));}
+            else if (k == 10) {mess.append(QString( "********** II.f ************ /n"));}
+            else if (k == 11) {mess.append(QString( "********** II.h ************ /n"));}
+            else if (k == 12){mess.append(QString( "********** II.g ************ /n"));}
+            else if (k == 13){mess.append(QString( "********** III.a ************ /n"));}
+            else if (k == 14){mess.append(QString( "********** III.b ************ /n"));}
+            else if (k == 15){mess.append(QString( "********** III.c ************ /n"));}
+            else if (k == 16){mess.append(QString( "********** III.d ************ /n"));}
+            else if (k == 17){mess.append(QString( "********** III.e ************ /n"));}
+            else if (k == 18){mess.append(QString( "********** Betweenness Centrality Clustering ************ /n")); times = 1;}
+            else if (k == 19){mess.append(QString( "********** CNM Clustering ************ /n")); times = 1;}
+            else if (k == 20){mess.append(QString( "********** R1a ************ /n"));}
+            else if (k == 21){mess.append(QString( "********** I.x ************ /n"));}
+            else if (k == 22){mess.append(QString( "********** RFD ************ /n"));}
+            else{}
+            for (int i = 0 ; i < times; i++)
+            {
+                Graph G;
+                G.manual_set_working_dir(workingDir);
+                G.read_edge(workingDir);
+                G.load_LFR_groundTruth();
+                if (k == 0) {G.random_aggregate();}
+                else if (k == 1) {G.random_aggregate_with_degree_comparison(); }
+                else if (k == 2) {G.random_aggregate_with_weight_comparison(); }
+                else if (k == 3) {G.random_aggregate_with_neighbour_initial_degree_bias(); }
+                else if (k == 4){G.random_aggregate_with_neighbour_initial_degree_bias_with_constraint();}
+                else if (k == 5) {G.random_aggregate_with_neighbour_CURRENT_degree_bias(); }
+                else if (k == 6){G.random_aggregate_with_neighbour_CURRENT_degree_bias_with_constraint();}
+                else if (k == 7) {G.random_aggregate_highest_CURRENT_degree_neighbour();}
+                else if (k == 8) {G.random_aggregate_with_minimum_weight_neighbour();}
+                else if (k == 9) {continue;G.random_aggregate_probabilistic_lowest_degree_neighbour_destructive();}
+                else if (k == 10) {continue;G.random_aggregate_probabilistic_candidate_with_minimum_weight_neighbour();}
+                else if (k == 11) {G.random_aggregate_greedy_max_weight();}
+                else if (k == 12){G.random_aggregate_greedy_max_degree();}
+                else if (k == 13){G.random_aggregate_retain_vertex_using_triangulation();}
+                else if (k == 14){continue;G.random_aggregate_retain_vertex_using_probabilistic_triangulation();}
+                else if (k == 15){continue;G.random_aggregate_with_highest_triangulated_vertex();}
+                else if (k == 16){continue;G.random_aggregate_retain_vertex_using_triangulation_times_weight();}
+                else if (k == 17){G.random_aggregate_retain_vertex_using_triangulation_of_cluster();}
+                else if (k == 18){continue;G.betweenness_centrality_clustering();}
+                else if (k == 19){G.fast_CMN();}
+                else if (k == 20){G.reverse_random_aggregate();}
+                else if (k == 21){G.reverse_random_aggregate_with_degree_comparison();}
+                else if (k == 22){G.random_functional_digraph();}
+                QList<double> id = G.LARGE_compute_Pairwise_efficient(-1);
+                iRAND+=id[0];
+                iJACCARD+=id[1];
+                iARI+=id[2];
+                iQ+=G.LARGE_compute_modularity();
+               // double gn = G.compute_GN_index();
+                double gn = 0.0;
+                G.LARGE_hard_reset();
+                iGN += gn;
+            }
+            //add to list
+            double normalisedRand = iRAND/times,
+                    normalisedJaccard = iJACCARD/times,
+                    normalisedARI = iARI/times,
+                    normalisedQ = iQ/times,
+                    normalisedGN = (double) iGN/times;
+            sRAND << normalisedRand; sJACCARD << normalisedJaccard; sARI << normalisedARI; sQ << normalisedQ; sGN << normalisedGN;
+            //write to file
+            QFile file(workingDir +"Stat.txt");
+            file.open(QFile::Text | QFile::Append);
+            QTextStream out(&file);
+            mess.append(QString("%1 \t %2 \t %3 \t %4 \t %5 \t %6\n").arg(normalisedRand).arg(normalisedJaccard).arg(normalisedARI).arg(normalisedQ).arg(normalisedGN).arg(t));
+            out << mess;
+            file.close();
+        }
+        RAND << sRAND; JACCARD << sJACCARD; ARI << sARI; Q << sQ; GN << sGN;
+    }
+    writeSeperateFile(QString("ARI"), ARI);
+   // writeSeperateFile(QString("JACCARD"), JACCARD);
+    writeSeperateFile(QString("Q"), Q);
+  //  writeSeperateFile(QString("GN"), GN);
+    plotMatrix(ARI, QString(workingDir + "ARI"));
+  //  plotMatrix(JACCARD, QString("Jaccard"));
+    plotMatrix(Q, QString(workingDir + "Q"));
+  //  plotMatrix(GN, QString("FoCC"));
+}
+
+
 int main(int argc, char *argv[])
 {
    // qInstallMessageHandler(myMessageOutput);
-    CompleteGraph_Exp();
+    //Large Test for LFR
+    QStringList folders;
+    folders << "n30000"<< "n40000"<< "n50000";
+    QString rootDir =  "C:/Users/Dumex/Desktop/SocialNetworksCollection/LFR_Benchmark_LargeTest/mu_0.1/";
+    for (int i = 0 ; i < folders.size(); i++)
+    {
+        workingDir = rootDir  + folders.at(i) +"/";
+        Graph * G = new Graph;
+        G->manual_set_working_dir(workingDir);
+        G->load_LFR_graph();
+        //make sure a new log file is recorded
+        QDir dir(workingDir);
+        QString logName("t_and_c_log.txt");
+        if (G->locate_file_in_dir(logName))
+        {
+            dir.remove(logName);
+        }
+        delete G;
+        LFR_benchmark_exp();
+    }
     return 0;
 
 /*

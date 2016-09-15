@@ -29,6 +29,15 @@ quint32 global_e = 0;
 quint32 global_v = 0;
 static int no_run = 0;
 
+enum RandomAgg { I_a, I_b, I_c,
+                 II_a, II_a_i, II_b, II_b_i, II_c, II_d, II_e, II_f, II_g, II_h,
+                 III_a, III_b, III_c, III_d, III_e,
+                 GN_Clustering, CNM_Clustering,
+                 R1a,
+                 I_x,
+                 RFD
+               };
+
 Graph::Graph()
 {   //set up graphic scenes to display all kinds of stuff
     graphIsReady = false;
@@ -137,7 +146,7 @@ void Graph::generateHiddenGnp(double z_in, double z_out)
         myVertexList.clear();
         myEdgeList.clear();
     }
-    int n = 10000, m = 4, v_per_c = n/m;
+    int n = 128, m = 4, v_per_c = n/m;
     QList<QPair<int,int> > e;
     std::uniform_real_distribution<double> dis(0,1);
     int out = 0 ,in = 0;
@@ -532,6 +541,7 @@ void Graph::load_LFR_groundTruth()
     QDir dir(globalDirPath);
     QFileInfoList fileList = dir.entryInfoList();
     QString first, second;
+    bool def = true;
     for (int i = 0; i < fileList.size(); i++)
     {
         QFileInfo f = fileList.at(i);
@@ -539,14 +549,180 @@ void Graph::load_LFR_groundTruth()
         if (filename.contains("communit"))
         {
             if (filename.contains("first"))
+            {
                 first = f.absoluteFilePath();
+                def = false;
+            }
             else if (filename.contains("second"))
+            {
                 second = f.absoluteFilePath();
+                def = false;
+            }
         }
     }
-    parse_LFR_groundTruth(second, 2);
+    if (def)    parse_LFR_groundTruth();
+    else    parse_LFR_groundTruth(second, 2);
 }
 
+void Graph::load_LFR_graph()
+{
+    QDir dir(globalDirPath);
+    if (!dir.exists())
+    {
+        qDebug() << "DIR NOT EXISTS! Terminating ...";
+        return;
+    }
+    QStringList filters;
+    filters << "*.dat";
+    QFileInfoList file = dir.entryInfoList(filters);
+    QString e_file;
+    for (int i = 0; i < file.size(); i++)
+    {
+        QFileInfo f = file.at(i);
+        QString name = f.fileName();
+        if (name.contains("network"))
+            e_file = f.absoluteFilePath();
+    }
+
+    //reload original vertices
+    //Parsing
+    QFile efile(e_file);
+    if (!efile.exists())
+    {
+        qDebug() << "FILE NOT FOUND! Recheck! Terminating ...";
+        return;
+    }
+    //else
+    //READ E FILE
+    efile.open(QFile::ReadOnly | QFile::Text);
+    QTextStream ein(&efile);
+    QList<QPair<quint32,quint32> > edge;
+    while (!ein.atEnd())
+    {
+        QStringList str = ein.readLine().split('\t');
+        if (str[0].startsWith("#")) continue;
+        bool ok;
+        quint32 v1 = str[0].toUInt(&ok), v2 = str[1].toUInt(&ok);
+        //index starts from 1 instead of 0
+        v1--;
+        v2--;
+        if (ok)
+        {
+            edge.append(qMakePair(v1,v2));
+        }
+    }
+    efile.close();
+    qDebug() << "Generating Edges ...";
+    typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::undirectedS> NormalGraph;
+    NormalGraph g;
+    for (int i = 0; i < edge.size(); i++)
+    {
+        QPair<quint32,quint32> p = edge.at(i);
+        boost::add_edge(p.first, p.second, g);
+    }
+    global_v = boost::num_vertices(g);
+    global_e = boost::num_edges(g);
+    // adding ve edge independent of global file
+    for (int i = 0; i < global_v; i++ )
+    {
+        Vertex * v = new Vertex;
+        v->setIndex(i);
+        myVertexList.append(v);
+    }
+
+    for (int i = 0; i < edge.size(); i++)
+    {
+        QPair<quint32,quint32> e = edge[i];
+        quint32 v = e.first, u = e.second;
+        Vertex * from = myVertexList.at(u);
+        Vertex * to = myVertexList.at(v);
+        Edge * newe = new Edge(from,to,i);
+        myEdgeList.append(newe);
+    }
+
+
+    bool fit = false;
+    if (myVertexList.size() == global_v && myEdgeList.size() == global_e)
+        fit = true;
+    qDebug() << "Check Sum" << fit;
+    if (fit)
+    {
+        graphIsReady = true;
+        parse_LFR_groundTruth();
+        save_current_run_as_edge_file("edge_file.txt");
+    }
+    else
+    {
+        qDebug() << "Preset V: " << global_v << "; E: " << global_e;
+        qDebug() << "Load V: " << myVertexList.size() << "; E: " << myEdgeList.size();
+    }
+}
+
+/** DEFAULT PARSER OF LFR: READ FILE "comunity.dat"
+ * @brief Graph::parse_LFR_groundTruth
+ */
+void Graph::parse_LFR_groundTruth()
+{
+    //read ground truth first
+    QString fileName("community.dat");
+    if (!locate_file_in_dir(fileName))
+    {
+        qDebug() << "FILE NOT FOUND!";
+        return;
+    }
+    QFile truth(fileName);
+    if (!truth.exists())
+    {
+        qDebug() << "Truth File Not Found for LFR!";
+        return;
+    }
+    truth.open(QFile::ReadOnly | QFile::Text);
+    QTextStream in(&truth);
+    QSet<int> C;
+    while (!in.atEnd())
+    {
+        QStringList line = in.readLine().split('\t');
+        bool ok;
+        quint32 vi = line[0].toUInt(&ok),
+                comm = line[1].toUInt(&ok);
+        //truth file starts from 1
+        vi -= 1;
+        comm -= 1;
+        if (!ok)
+        {
+            qDebug() << "- Something went wrong wile parsing LFR ground truth";
+            return;
+        }
+        else
+        {
+            Vertex * v = myVertexList.at(vi);
+            v->setTruthCommunity(comm);
+            if (!C.contains(comm))
+                C.insert(comm);
+        }
+    }
+    //set ground truth communities
+    for (int i = 0; i < C.size(); i++)
+    {
+        QList<quint32> c;
+        ground_truth_communities.append(c);
+    }
+
+    for (int i = 0; i < myVertexList.size(); i++)
+    {
+        Vertex * v = myVertexList.at(i);
+        quint32 c = v->getTruthCommunity();
+        ground_truth_communities[c].append(v->getIndex());
+    }
+
+    assign_vertex_to_its_ground_truth_comm();
+}
+
+/** READ LFR COMMUNITY PATH FOR HIERARCHY
+ * @brief Graph::parse_LFR_groundTruth
+ * @param filepath
+ * @param level: hierarchy level
+ */
 void Graph::parse_LFR_groundTruth(QString filepath, int level)
 {
     //read ground truth first
@@ -679,7 +855,7 @@ void Graph::read_Gephi_graph_and_produce_super_graph(QString filePath)
             bool edge = str.contains(" edge");
             if (!node && !edge)
             {
-                qDebug() << "FILE FORMATE ERROR";
+                qDebug() << "FILE FORMAT ERROR";
                 return;
             }
             else
@@ -889,12 +1065,13 @@ void Graph::save_edge_file_from_GML()
  */
 void Graph::save_current_run_as_edge_file(QString fileName)
 {
-    QFile outFile(fileName);
+    QString absolutePath = globalDirPath + fileName;
+    QFile outFile(absolutePath);
     if (outFile.exists())
         outFile.remove();
     outFile.open(QIODevice::WriteOnly | QIODevice::Text);
     QTextStream ts(&outFile);
-    ts << "Source\tTarget" << endl;
+
     for (int i = 0; i < myEdgeList.size(); i++)
     {
         quint32 from = myEdgeList[i]->fromVertex()->getIndex(), to = myEdgeList[i]->toVertex()->getIndex();
@@ -1280,8 +1457,8 @@ void Graph::random_aggregate()
             t++;
         }
     }
+    record_time_and_number_of_cluster(RandomAgg::I_a,t0.elapsed(),winners.size());
     centroids = winners;
-
     qDebug("I.a - Time elapsed: %d ms", t0.elapsed());
     large_graph_parse_result();
 }
@@ -1339,8 +1516,8 @@ void Graph::reverse_random_aggregate()
             t++;
         }
     }
+    record_time_and_number_of_cluster(RandomAgg::R1a,t0.elapsed(),winners.size());
     centroids = winners;
-
     qDebug("I.a_i - Time elapsed: %d ms", t0.elapsed());
     large_graph_parse_result();
 }
@@ -1406,8 +1583,76 @@ void Graph::random_aggregate_with_degree_comparison()
             t++;
         }
     }
+    record_time_and_number_of_cluster(RandomAgg::I_b,t0.elapsed(),winners.size());
     centroids = winners;
     qDebug("I.b - Time elapsed: %d ms", t0.elapsed());
+    large_graph_parse_result();
+}
+
+/** REVERSE I.b or I.x
+ * Pr(v) = u.a.r
+ * Pr(u) = u.a.r
+ * if d(v) \geq d(u) ...
+ * @brief Graph::reverse_random_aggregate_with_degree_comparison
+ */
+void Graph::reverse_random_aggregate_with_degree_comparison()
+{
+    if (!checkGraphCondition())
+    {
+        reConnectGraph();
+    }
+
+    //initialise arrays
+    QList<Vertex*> players = myVertexList;
+    QList<Vertex*> winners;
+    quint32 t = 0;
+    QTime t0;
+    t0.start();
+
+    while(!players.empty()) //start
+    {
+        //select a vertex uniformly at random
+        quint32 size = players.size();
+        std::uniform_int_distribution<quint32> distribution(0,size-1);
+        quint32 selected_index = distribution(generator);
+        Vertex * selected = players.at(selected_index);
+        //get a neighbour
+        quint32 no_neighbour = selected->getNumberEdge();
+        if (no_neighbour == 0) // if there is no neighbour, declare a winner
+        {
+            winners.append(selected);
+            players.removeOne(selected);
+            t++;
+        }
+        else // else absorb
+        {
+            std::uniform_int_distribution<quint32> distribution2(0,no_neighbour-1);
+            quint32 selected_edge_index = distribution2(generator);
+            Edge * e = selected->getEdge(selected_edge_index);
+            Vertex * neighbour = selected->get_neighbour_fromEdge(selected_edge_index); //get the neighbour (not clean)
+            Vertex * winner, * loser;
+            quint32 selected_d = selected->getNumberEdge(), neighbour_d = neighbour->getNumberEdge();
+            if (selected_d > neighbour_d)
+            {
+                winner = neighbour;
+                loser = selected;
+            }
+            else
+            {
+                winner = selected;
+                loser = neighbour;
+            }
+
+            //abosbr
+            hierarchy.append(qMakePair(loser->getIndex(), winner->getIndex()));
+            winner->absorb_removeEdge(e);
+            players.removeOne(loser);
+            t++;
+        }
+    }
+    record_time_and_number_of_cluster(RandomAgg::I_x,t0.elapsed(),winners.size());
+    centroids = winners;
+    qDebug("I.x - Time elapsed: %d ms", t0.elapsed());
     large_graph_parse_result();
 }
 
@@ -1478,6 +1723,7 @@ void Graph::random_aggregate_with_weight_comparison()
             t++;
         }
     }
+    record_time_and_number_of_cluster(RandomAgg::I_c,t0.elapsed(),winners.size());
     centroids = winners;
     qDebug("I.c - Time elapsed: %d ms", t0.elapsed());
     large_graph_parse_result();
@@ -1533,6 +1779,7 @@ void Graph::random_aggregate_with_neighbour_initial_degree_bias()
             t++;
         }
     }
+    record_time_and_number_of_cluster(RandomAgg::II_a,t0.elapsed(),winners.size());
     centroids = winners;
     qDebug("II.a - Time elapsed: %d ms", t0.elapsed());
     large_graph_parse_result();
@@ -1595,6 +1842,7 @@ void Graph::random_aggregate_with_neighbour_initial_degree_bias_with_constraint(
             t++;
         }
     }
+    record_time_and_number_of_cluster(RandomAgg::II_a_i,t0.elapsed(),winners.size());
     centroids = winners;
     qDebug("II.a(i) - Time elapsed: %d ms", t0.elapsed());
     large_graph_parse_result();
@@ -1645,6 +1893,7 @@ void Graph::random_aggregate_with_neighbour_CURRENT_degree_bias()
             t++;
         }
     }
+    record_time_and_number_of_cluster(RandomAgg::II_b,t0.elapsed(),winners.size());
     centroids = winners;
     qDebug("II.b - Time elapsed: %d ms", t0.elapsed());
     large_graph_parse_result();
@@ -1702,6 +1951,7 @@ void Graph::random_aggregate_with_neighbour_CURRENT_degree_bias_with_constraint(
             t++;
         }
     }
+    record_time_and_number_of_cluster(RandomAgg::II_b_i,t0.elapsed(),winners.size());
     centroids = winners;
     qDebug("II.b(i) - Time elapsed: %d ms", t0.elapsed());
     large_graph_parse_result();
@@ -1766,6 +2016,7 @@ void Graph::random_aggregate_highest_CURRENT_degree_neighbour()
             t++;
         }
     }
+    record_time_and_number_of_cluster(RandomAgg::II_c,t0.elapsed(),winners.size());
     centroids = winners;
     qDebug("II.c - Time elapsed: %d ms", t0.elapsed());
     large_graph_parse_result();
@@ -1821,6 +2072,7 @@ void Graph::random_aggregate_with_minimum_weight_neighbour()
             t++;
         }
     }
+    record_time_and_number_of_cluster(RandomAgg::II_d,t0.elapsed(),winners.size());
     centroids = winners;
     qDebug("II.d - Time elapsed: %d ms", t0.elapsed());
     large_graph_parse_result();
@@ -1892,6 +2144,7 @@ void Graph::random_aggregate_probabilistic_lowest_degree_neighbour_destructive()
         }
         t++;
     }
+    record_time_and_number_of_cluster(RandomAgg::II_e,t0.elapsed(),winners.size());
     centroids = winners;
     qDebug("II.e - Time elapsed: %d ms", t0.elapsed());
     large_graph_parse_result();
@@ -1973,6 +2226,7 @@ void Graph::random_aggregate_probabilistic_candidate_with_minimum_weight_neighbo
             }
         }
     }
+    record_time_and_number_of_cluster(RandomAgg::II_f,t0.elapsed(),winners.size());
     centroids = winners;
     qDebug("II.f - Time elapsed: %d ms", t0.elapsed());
     // draw_dense_graph_aggregation_result();
@@ -2046,6 +2300,7 @@ void Graph::random_aggregate_greedy_max_degree()
 
         t++;
     }
+    record_time_and_number_of_cluster(RandomAgg::II_g,t0.elapsed(),winners.size());
     centroids = winners;
     qDebug("II.g - Time elapsed: %d ms", t0.elapsed());
     large_graph_parse_result();
@@ -2124,6 +2379,7 @@ void Graph::random_aggregate_greedy_max_weight()
         }
 
     }
+    record_time_and_number_of_cluster(RandomAgg::II_h,t0.elapsed(),winners.size());
     centroids = winners;
     qDebug("II.h - Time elapsed: %d ms", t0.elapsed());
     large_graph_parse_result();
@@ -2202,6 +2458,7 @@ void Graph::random_aggregate_with_highest_triangulated_vertex()
             t++;
         }
     }
+    record_time_and_number_of_cluster(RandomAgg::III_c,t0.elapsed(),winners.size());
     centroids = winners;
     qDebug("III.c - Time elapsed: %d ms", t0.elapsed());
     large_graph_parse_result();
@@ -2250,9 +2507,11 @@ void Graph::random_aggregate_retain_vertex_using_triangulation()
         players.removeOne(loser);
         t++;
     }
+    record_time_and_number_of_cluster(RandomAgg::III_a,t0.elapsed(),0); // the number of cluster is only determine later on
     qDebug("III.a - Time elapsed: %d ms", t0.elapsed());
     large_parse_retain_result();
-
+    //time is recorded first
+    record_time_and_number_of_cluster(RandomAgg::III_a,0,large_result.size());
 }
 
 
@@ -2302,8 +2561,11 @@ void Graph::random_aggregate_retain_vertex_using_probabilistic_triangulation()
         }
         t++;
     }
+    record_time_and_number_of_cluster(RandomAgg::III_b,t0.elapsed(),0); // the number of cluster is only determine later on
     qDebug("III.b - Time elapsed: %d ms", t0.elapsed());
     large_parse_retain_result();
+    //time is recorded first
+    record_time_and_number_of_cluster(RandomAgg::III_b,0,large_result.size());
 }
 
 
@@ -2368,8 +2630,11 @@ void Graph::random_aggregate_retain_vertex_using_triangulation_times_weight()
         }
         t++;
     }
+    record_time_and_number_of_cluster(RandomAgg::III_d,t0.elapsed(),0); // the number of cluster is only determine later on
     qDebug("III.d - Time elapsed: %d ms", t0.elapsed());
     large_parse_retain_result();
+    //time is recorded first
+    record_time_and_number_of_cluster(RandomAgg::III_d,0,large_result.size());
 
 }
 
@@ -2424,9 +2689,11 @@ void Graph::random_aggregate_retain_vertex_using_triangulation_of_cluster()
         }
         t++;
     }
-
+    record_time_and_number_of_cluster(RandomAgg::III_e,t0.elapsed(),0); // the number of cluster is only determine later on
     qDebug("III.e - Time elapsed: %d ms", t0.elapsed());
     large_parse_retain_result();
+    //time is recorded first
+    record_time_and_number_of_cluster(RandomAgg::III_e,0,large_result.size());
 
 }
 
@@ -3179,6 +3446,7 @@ void Graph::large_parse_retain_result()
     graphIsReady = false;
 }
 
+
 void Graph::print_result_stats()
 {
     qDebug() << "- Writing Log ...";
@@ -3207,7 +3475,71 @@ void Graph::print_result_stats()
     qDebug() << " - DONE!!!";
 }
 
+/** CREATE THIS LOG FILE
+ * @brief Graph::create_time_and_number_of_cluster_file
+ * the matrix format is:
+ *      Type \tab average_t \tab average_c
+ *      I.a  \tab   xx      \tab    yy
+ *      ...
+ */
+void Graph::create_time_and_number_of_cluster_file()
+{
+    QString filePath = globalDirPath + "/t_and_c_log.txt";
+    QFile file(filePath);
+    file.open(QIODevice::WriteOnly | QIODevice::Text);
+    QTextStream out(&file);
+    out << "Type \t average_t(msec) \t average_c \n";
+    QStringList types;
+    types << "I.a"<< "I.b"<< "I.c"
+          << "II.a"<< "II.a.i"<< "II.b"<< "II.b.i"<< "II.c"<< "II.d"<< "II.e"<< "II.f"<< "II.g"<< "II.h"
+          << "III.a"<< "III.b"<< "III.c"<< "III.d"<< "III.e"
+          << "GN_Clustering"<< "CNM_Clustering"
+          << "R1a"<<"I_x"<< "RFD";
+    for(int i = 0; i < types.size(); i++)
+    {
+        out << types[i] << '\t' << QString::number(0) << '\t' << QString::number(0) << '\n';
+    }
+    file.close();
+}
 
+/** RECORD TIME EXECUTED AND NUMBER OF CLUSTER
+ * @brief Graph::record_time_and_number_of_cluster
+ */
+void Graph::record_time_and_number_of_cluster(int AlgorithmType, int t, int c)
+{
+    QString fileName = "t_and_c_log.txt";
+    if (!locate_file_in_dir(fileName))
+    {
+        create_time_and_number_of_cluster_file();
+        locate_file_in_dir(fileName);
+    }
+
+    QFile outFile(fileName);
+    outFile.open(QIODevice::ReadWrite | QIODevice::Text);
+    QTextStream in(&outFile);
+    int id = AlgorithmType + 1; //first line is skipped
+    QStringList types = in.readAll().split('\n');
+    QString record = types.at(id); //whole record
+    QStringList t_and_c = record.split('\t'); //get a type record
+    //start rewriting
+    int prev_t = t_and_c.at(1).toInt(),
+        prev_c = t_and_c.at(2).toInt();
+    int avg_t = 0, avg_c = 0;
+    if (t == 0) avg_t = prev_t;
+    else avg_t = (prev_t +  t)/2;
+    if (c == 0) avg_c = prev_c;
+    else avg_c = (prev_c + c)/2;
+    QString new_record = QString(t_and_c.at(0)+ '\t'
+               + QString::number(avg_t) + '\t'
+               + QString::number(avg_c));
+    types.replace(id, new_record);
+    //rewrite
+    outFile.resize(0);
+    for(int i = 0; i < types.size(); i++)
+        in << types.at(i) << '\n';
+
+    outFile.close();
+}
 
 /** Save a specific community
  * Sample GML
@@ -3824,6 +4156,7 @@ QList<double> Graph::LARGE_compute_Pairwise_efficient(int n)
 
     double RAND = (double) (a+d)/(a+b+c+d);
     double Jaccard = (double) a/(a+b+c);
+    qDebug() << a/(a+b+c);
     //
     QList<quint64> param_ARI;
     param_ARI << ni_choose_2 << nj_choose_2 << n_choose_2 << nij_choose_2;
@@ -3963,10 +4296,11 @@ void Graph::random_functional_digraph()
         hierarchy.append(qMakePair(selected->getIndex(), neighbour->getIndex()));
         selected->absorb_retainEdge(e);
         //points to that neighbour
-        t++;
     }
+    record_time_and_number_of_cluster(RandomAgg::RFD,t0.elapsed(),0);
     qDebug("RFD - Time elapsed: %d ms", t0.elapsed());
     large_parse_retain_result();
+    record_time_and_number_of_cluster(RandomAgg::RFD,0,large_result.size());
 }
 
 //////////////////////////// SNAP COMMUNITY ALGORITHM /////////////////////
@@ -3983,7 +4317,11 @@ void Graph::betweenness_centrality_clustering()
     int k = ground_truth_communities.size();
     PUNGraph TGraph = convertToSnapUnGraph();
     TVec < TCnCom > CommV;
-    double q = TSnap::_CommunityGirvanNewman(TGraph, CommV, k);
+   // double q = TSnap::_CommunityGirvanNewman(TGraph, CommV, k);
+    QTime t0;
+    t0.start();
+    double q = TSnap::CommunityGirvanNewman(TGraph, CommV);
+    record_time_and_number_of_cluster(RandomAgg::GN_Clustering,t0.elapsed(),CommV.Len());
     if (q < -0.5) {  TSnap::GetSccs(TGraph, CommV); } // if was not clustered
     QList<QList<quint32> > result;
     convertSnapCommtoMyComm(CommV, result);
@@ -4005,7 +4343,13 @@ void Graph::fast_CMN()
     int k = ground_truth_communities.size();
     PUNGraph TGraph = convertToSnapUnGraph();
     TVec < TCnCom > CommV;
+    qDebug() << TGraph->GetEdges() << TGraph->GetNodes();
+    //start time
+    QTime t0;
+    t0.start();
     TSnap::CommunityCNM(TGraph, CommV);
+    record_time_and_number_of_cluster(RandomAgg::CNM_Clustering,t0.elapsed(),CommV.Len());
+    //parse result
     QList<QList<quint32> > result;
     convertSnapCommtoMyComm(CommV, result);
     large_result = result;
