@@ -420,7 +420,7 @@ bool TSecTm::GetTmStruct(const uint& AbsSec, struct tm& Tm) {
   #elif defined(GLib_BCB)
   Tm=*gmtime(&TimeT); return true;
   #else
-  return gmtime_r(&TimeT, &Tm) != NULL;
+//  return gmtime_r(&TimeT, &Tm) != NULL;
   #endif
 }
 

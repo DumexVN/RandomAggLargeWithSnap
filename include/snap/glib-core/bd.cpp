@@ -32,10 +32,10 @@ int matherr(struct __exception *e){
 //  return 1;
 //}
 #else
-int _matherr(struct _exception* e){
+/*int _matherr(struct _exception* e){
   e->retval=0;
   return 1;
-}
+}*/
 #endif
 
 /////////////////////////////////////////////////

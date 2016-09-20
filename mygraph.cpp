@@ -3455,7 +3455,7 @@ void Graph::print_result_stats()
     outFile.open(QIODevice::WriteOnly | QIODevice::Append);
     QTextStream out(&outFile);
     //print size of clusters
-    quint32 small = 0, isolated = 0;
+    quint32 sm = 0, isolated = 0;
     out << "****************** 1 RUN ***********************" << endl;
     out << "Cluster#\tSize" << endl;
     for (int i = 0; i < large_result.size(); i++)
@@ -3464,13 +3464,13 @@ void Graph::print_result_stats()
         if (size == 1)
             isolated++;
         else if (size > 1 && size <= 3)
-            small++;
+            sm++;
         else
             out << i <<'\t' << large_result[i].size() << endl;
     }
     out << "********************************" << endl;
     out << "Summary: Total C:" << large_result.size() << endl
-        << "Small Size C ( < 3): " << small << "; Isolated (== 1): " << isolated;
+        << "Small Size C ( < 3): " << sm << "; Isolated (== 1): " << isolated;
     outFile.close();
     qDebug() << " - DONE!!!";
 }
@@ -4080,7 +4080,13 @@ QList<double> Graph::LARGE_compute_Pairwise_efficient(int n)
     qDebug() << "- STARTING Pairwise Indices ...";
     qDebug() << "- Number Of unique elements: " << n;
     qDebug() << "- Number of Clusters:" << large_result.size();
-    quint64 nij = 0, nij_minus = 0, nij_square = 0, nij_choose_2 = 0;
+    quint64 nij = 0, nij_minus = 0, nij_square = 0, nij_choose_2 = 0, n_choose_2 = 0;
+    quint64 n_minus_1 = n-1,
+            n_times_n_minus = n*n_minus_1;
+    n_choose_2 = n_times_n_minus/2;
+    qDebug() << "n: " << n
+             << "n*(n-1): " << n_times_n_minus
+             << "n choose 2: " << n_choose_2;
     int row = ground_truth_communities.size(), column = large_result.size();
   //  qDebug() << "R:" << row << "; C:" << column;
     QList<quint64> ni, nj; //ni: sum row, nj: sum column
@@ -4108,8 +4114,8 @@ QList<double> Graph::LARGE_compute_Pairwise_efficient(int n)
         ni.append(sum_row);
     }
 
+
     quint64 n_square = 0,
-            n_choose_2 = n*(n-1)/2,
             ni_sum = 0, //sum row
             nj_sum =0, // sum column
             ni_choose_2 = 0, //bionomial row
@@ -4156,7 +4162,7 @@ QList<double> Graph::LARGE_compute_Pairwise_efficient(int n)
 
     double RAND = (double) (a+d)/(a+b+c+d);
     double Jaccard = (double) a/(a+b+c);
-    qDebug() << a/(a+b+c);
+ //   qDebug() << a/(a+b+c);
     //
     QList<quint64> param_ARI;
     param_ARI << ni_choose_2 << nj_choose_2 << n_choose_2 << nij_choose_2;
@@ -4189,7 +4195,7 @@ quint64 Graph::calC(QList<quint64> param)
 {
     quint64 ni_square = param[0], nij_square = param[1];
     quint64 c = (ni_square - nij_square)/2;
- //   qDebug() << "c:" << c;
+  //  qDebug() << "c:" << c;
     return c;
 }
 
@@ -4201,7 +4207,7 @@ quint64 Graph::calD(QList<quint64> param)
             nj_square = param[3];
     quint64 d = n_square + nij_square - ni_square - nj_square; //type ii: diff diff
     d /= 2;
-  //  qDebug() << "d:" << d;
+ //   qDebug() << "d:" << d;
     return d;
 }
 

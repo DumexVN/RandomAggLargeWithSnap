@@ -680,7 +680,7 @@ void TNumericalStuff::SymetricToTridiag(TFltVV& a, int n, TFltV& d, TFltV& e) {
                 }
                 f=a(i-1,l-1);
                 g=(f >= 0.0 ? -sqrt(h) : sqrt(h));
-                IAssertR(isnan(g) == 0, TFlt::GetStr(h));
+                IAssertR(std::isnan(g) == 0, TFlt::GetStr(h));
                 e[i]=scale*g;
                 h -= f*g; //Now h is equation (11.2.4).
                 a(i-1,l-1)=f-g; //Store u in the ith row of a.
@@ -702,7 +702,7 @@ void TNumericalStuff::SymetricToTridiag(TFltVV& a, int n, TFltV& d, TFltV& e) {
                     e[j]=g=e[j]-hh*f;
                     for (k=1;k<=j;k++) { //Reduce a, equation (11.2.13).
                         a(j-1,k-1) -= (f*e[k]+g*a(i-1,k-1));
-                        Assert(isnan(a(j-1,k-1)) == 0);
+                        Assert(std::isnan(a(j-1,k-1)) == 0);
                     }
                 }
             }
@@ -724,7 +724,7 @@ void TNumericalStuff::SymetricToTridiag(TFltVV& a, int n, TFltV& d, TFltV& e) {
                     g += a(i-1,k-1)*a(k-1,j-1);
                 for (k=1;k<=l;k++) {
                     a(k-1,j-1) -= g*a(k-1,i-1);
-                    Assert(isnan(a(k-1,j-1)) == 0);
+                    Assert(std::isnan(a(k-1,j-1)) == 0);
                 }
             }
         }

@@ -6,6 +6,7 @@
 #include <QFile>
 #include <QTextStream>
 
+#include <random>
 #include <stdio.h>
 #include <stdlib.h>
 #include "mygraph.h"
@@ -944,6 +945,10 @@ void SocialGraph_exp(const QString &graph_name)
 ///
 void LFR_benchmark_exp()
 {
+    QList<int> blocked_type;
+    blocked_type << 9 << 10 << 14 << 15 << 16 << 18 << 19//eliminated after n > 10,000
+                 /*<< 0 << 1 << 2 << 3 << 4 << 5 << 6 << 7 << 8 << 19 << 11 << 12*/; //eliminated after n > 100,000
+
     QList<QList<double> > RAND, JACCARD, ARI, Q, GN;
     for (int t = 0 ; t < 1; t++)
     {
@@ -951,7 +956,7 @@ void LFR_benchmark_exp()
         for (int k = 0; k <= 22; k++)
         {
             //generate GN graph
-            int times = 10;
+            int times = 20;
             double iRAND = 0.0 , iJACCARD = 0.0, iARI = 0.0, iQ = 0.0, iGN = 0.0; // i = iterator
             //run algorithm here
             QString mess;
@@ -981,42 +986,58 @@ void LFR_benchmark_exp()
             else{}
             for (int i = 0 ; i < times; i++)
             {
-                Graph G;
-                G.manual_set_working_dir(workingDir);
-                G.read_edge(workingDir);
-                G.load_LFR_groundTruth();
-                if (k == 0) {G.random_aggregate();}
-                else if (k == 1) {G.random_aggregate_with_degree_comparison(); }
-                else if (k == 2) {G.random_aggregate_with_weight_comparison(); }
-                else if (k == 3) {G.random_aggregate_with_neighbour_initial_degree_bias(); }
-                else if (k == 4){G.random_aggregate_with_neighbour_initial_degree_bias_with_constraint();}
-                else if (k == 5) {G.random_aggregate_with_neighbour_CURRENT_degree_bias(); }
-                else if (k == 6){G.random_aggregate_with_neighbour_CURRENT_degree_bias_with_constraint();}
-                else if (k == 7) {G.random_aggregate_highest_CURRENT_degree_neighbour();}
-                else if (k == 8) {G.random_aggregate_with_minimum_weight_neighbour();}
-                else if (k == 9) {continue;G.random_aggregate_probabilistic_lowest_degree_neighbour_destructive();}
-                else if (k == 10) {continue;G.random_aggregate_probabilistic_candidate_with_minimum_weight_neighbour();}
-                else if (k == 11) {G.random_aggregate_greedy_max_weight();}
-                else if (k == 12){G.random_aggregate_greedy_max_degree();}
-                else if (k == 13){G.random_aggregate_retain_vertex_using_triangulation();}
-                else if (k == 14){continue;G.random_aggregate_retain_vertex_using_probabilistic_triangulation();}
-                else if (k == 15){continue;G.random_aggregate_with_highest_triangulated_vertex();}
-                else if (k == 16){continue;G.random_aggregate_retain_vertex_using_triangulation_times_weight();}
-                else if (k == 17){G.random_aggregate_retain_vertex_using_triangulation_of_cluster();}
-                else if (k == 18){continue;G.betweenness_centrality_clustering();}
-                else if (k == 19){G.fast_CMN();}
-                else if (k == 20){G.reverse_random_aggregate();}
-                else if (k == 21){G.reverse_random_aggregate_with_degree_comparison();}
-                else if (k == 22){G.random_functional_digraph();}
-                QList<double> id = G.LARGE_compute_Pairwise_efficient(-1);
-                iRAND+=id[0];
-                iJACCARD+=id[1];
-                iARI+=id[2];
-                iQ+=G.LARGE_compute_modularity();
-               // double gn = G.compute_GN_index();
-                double gn = 0.0;
-                G.LARGE_hard_reset();
-                iGN += gn;
+                if (blocked_type.contains(k))
+                {
+                    iRAND+=0;
+                    iJACCARD+=0;
+                    iARI+=0;
+                    iQ+=0;
+                    iGN+=0;
+                }
+                else
+                {
+                    Graph G;
+                    G.manual_set_working_dir(workingDir);
+                    G.read_edge(workingDir);
+                    G.load_LFR_groundTruth();
+                    if (k == 0) {G.random_aggregate();}
+                    else if (k == 1) {G.random_aggregate_with_degree_comparison(); }
+                    else if (k == 2) {G.random_aggregate_with_weight_comparison(); }
+                    else if (k == 3) {G.random_aggregate_with_neighbour_initial_degree_bias(); }
+                    else if (k == 4){G.random_aggregate_with_neighbour_initial_degree_bias_with_constraint();}
+                    else if (k == 5) {G.random_aggregate_with_neighbour_CURRENT_degree_bias(); }
+                    else if (k == 6){G.random_aggregate_with_neighbour_CURRENT_degree_bias_with_constraint();}
+                    else if (k == 7) {G.random_aggregate_highest_CURRENT_degree_neighbour();}
+                    else if (k == 8) {G.random_aggregate_with_minimum_weight_neighbour();}
+                    else if (k == 9) {G.random_aggregate_probabilistic_lowest_degree_neighbour_destructive();}
+                    else if (k == 10) {G.random_aggregate_probabilistic_candidate_with_minimum_weight_neighbour();}
+                    else if (k == 11) {G.random_aggregate_greedy_max_weight();}
+                    else if (k == 12){G.random_aggregate_greedy_max_degree();}
+                    else if (k == 13){G.random_aggregate_retain_vertex_using_triangulation();}
+                    else if (k == 14){G.random_aggregate_retain_vertex_using_probabilistic_triangulation();}
+                    else if (k == 15){G.random_aggregate_with_highest_triangulated_vertex();}
+                    else if (k == 16){G.random_aggregate_retain_vertex_using_triangulation_times_weight();}
+                    else if (k == 17){G.random_aggregate_retain_vertex_using_triangulation_of_cluster();}
+                    else if (k == 18){G.betweenness_centrality_clustering();}
+                    else if (k == 19){G.fast_CMN();}
+                    else if (k == 20){G.reverse_random_aggregate();}
+                    else if (k == 21){G.reverse_random_aggregate_with_degree_comparison();}
+                    else if (k == 22){G.random_functional_digraph();}
+                    QList<double> id = G.LARGE_compute_Pairwise_efficient(-1);
+                    if (id[0] > 1 || id[1] > 1 || id[2] > 1)
+                    {
+                        qDebug() << "INCORRECT VALUES OF PAIRWISE COMPARISON";
+                        return;
+                    }
+                    iRAND+=id[0];
+                    iJACCARD+=id[1];
+                    iARI+=id[2];
+                    iQ+=G.LARGE_compute_modularity();
+                   // double gn = G.compute_GN_index();
+                    double gn = 0.0;
+                    G.LARGE_hard_reset();
+                    iGN += gn;
+                }
             }
             //add to list
             double normalisedRand = iRAND/times,
@@ -1040,7 +1061,7 @@ void LFR_benchmark_exp()
     writeSeperateFile(QString("Q"), Q);
   //  writeSeperateFile(QString("GN"), GN);
     plotMatrix(ARI, QString(workingDir + "ARI"));
-  //  plotMatrix(JACCARD, QString("Jaccard"));
+    plotMatrix(JACCARD, QString(workingDir + "Jaccard"));
     plotMatrix(Q, QString(workingDir + "Q"));
   //  plotMatrix(GN, QString("FoCC"));
 }
@@ -1051,7 +1072,8 @@ int main(int argc, char *argv[])
    // qInstallMessageHandler(myMessageOutput);
     //Large Test for LFR
     QStringList folders;
-    folders << "n30000"<< "n40000"<< "n50000";
+    folders  /* << "n1000" /*<< "n2000"<< "n3000"<< "n4000" */ //;
+    << "n50000";
     QString rootDir =  "C:/Users/Dumex/Desktop/SocialNetworksCollection/LFR_Benchmark_LargeTest/mu_0.1/";
     for (int i = 0 ; i < folders.size(); i++)
     {

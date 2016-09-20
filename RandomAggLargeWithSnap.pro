@@ -13,6 +13,8 @@ CONFIG   += console
 CONFIG   += c++11
 CONFIG   -= app_bundle
 
+QMAKE_LFLAGS_WINDOWS += -Wl,--stack,100000000
+
 TEMPLATE = app
 
 DEFINES -= UNICODE

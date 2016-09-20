@@ -1,3 +1,5 @@
+#include <algorithm>
+
 /////////////////////////////////////////////////
 // Random
 const int TRnd::RndSeed=0;
@@ -1084,7 +1086,7 @@ bool TStr::IsPrefix(const char *Str) const {
 	if (len > thisLen) {
 		return false;
 	} else {
-        size_t minLen = Smin(len, thisLen);
+        size_t minLen = (std::min)(len, thisLen);
 		int cmp = strncmp(Str, RStr->Bf, minLen);
 		return cmp == 0;
 	}

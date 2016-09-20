@@ -186,8 +186,8 @@ void TSpecFunc::LinearFit(
   }
   R2 = TMath::Sqr(N*sXY - sX*sY) / ((N*sSqX - sX*sX) * (N*sSqY - sY*sY)); }
   if (1.1 < R2 || -1.1 > R2) R2 = 0.0;
-  if (isnan(A) || ! isfinite(A)) A = 0.0;
-  if (isnan(B) || ! isfinite(B)) B = 0.0;
+  if (std::isnan(A) || ! std::isfinite(A)) A = 0.0;
+  if (std::isnan(B) || ! std::isfinite(B)) B = 0.0;
 }
 
 void TSpecFunc::PowerFit(const TVec<TFltPr>& XY, double& A, double& B,
@@ -201,8 +201,8 @@ void TSpecFunc::PowerFit(const TVec<TFltPr>& XY, double& A, double& B,
   }
   TSpecFunc::LinearFit(LogXY, AA, BB, SigA, SigB, Chi2, R2);
   A = exp(AA);  B = BB;
-  if (isnan(AA) || ! isfinite(AA)) A = 0.0;
-  if (isnan(BB) || ! isfinite(BB)) B = 0.0;
+  if (std::isnan(AA) || ! std::isfinite(AA)) A = 0.0;
+  if (std::isnan(BB) || ! std::isfinite(BB)) B = 0.0;
 }
 
 void TSpecFunc::LogFit(const TVec<TFltPr>& XY, double& A, double& B,
