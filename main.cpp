@@ -945,9 +945,10 @@ void SocialGraph_exp(const QString &graph_name)
 ///
 void LFR_benchmark_exp()
 {
+    qDebug() << "LFR Experiment Started";
     QList<int> blocked_type;
     blocked_type << 9 << 10 << 14 << 15 << 16 << 18 << 19//eliminated after n > 10,000
-                 /*<< 0 << 1 << 2 << 3 << 4 << 5 << 6 << 7 << 8 << 19 << 11 << 12*/; //eliminated after n > 100,000
+                 << 0 << 1 << 2 << 3 << 4 << 5 << 6 << 7 << 8 << 19 << 11 << 12; //eliminated after n > 100,000
 
     QList<QList<double> > RAND, JACCARD, ARI, Q, GN;
     for (int t = 0 ; t < 1; t++)
@@ -956,7 +957,7 @@ void LFR_benchmark_exp()
         for (int k = 0; k <= 22; k++)
         {
             //generate GN graph
-            int times = 20;
+            int times = 5;
             double iRAND = 0.0 , iJACCARD = 0.0, iARI = 0.0, iQ = 0.0, iGN = 0.0; // i = iterator
             //run algorithm here
             QString mess;
@@ -1071,9 +1072,10 @@ int main(int argc, char *argv[])
 {
    // qInstallMessageHandler(myMessageOutput);
     //Large Test for LFR
+    qDebug() << "LARGE TEST LFR";
     QStringList folders;
     folders  /* << "n1000" /*<< "n2000"<< "n3000"<< "n4000" */ //;
-    << "n50000";
+    << "n1M" ;
     QString rootDir =  "C:/Users/Dumex/Desktop/SocialNetworksCollection/LFR_Benchmark_LargeTest/mu_0.1/";
     for (int i = 0 ; i < folders.size(); i++)
     {
