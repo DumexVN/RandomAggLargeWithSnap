@@ -219,60 +219,61 @@ void Graph::generateHiddenGnp(double z_in, double z_out)
            myVertexList.size(), myEdgeList.size(), ground_truth_communities.size());
 }
 
-/** with large N
+
+/** Gnp with large N,
+ * see note for more details i.e. threshold, q and p
+ * let G = g.l where g is the number of hidden clusters and l is the number of vertices in cluster
+ * q is the within edge probability
+ * p is the out edge probability
  * @brief Graph::generateHiddenGnp_LargeN
  * @param pin
  * @param pout
  * @param n
  */
 
-void Graph::generateHiddenGnp_LargeN(double z_in, double z_out, int n)
+void Graph::generateHiddenGnp_LargeN(double q, double p, quint32 l)
 {
     if (myVertexList.size() > 0 || myEdgeList.size() > 0)
     {
         myVertexList.clear();
         myEdgeList.clear();
     }
-    int m = 4, v_per_c = n/m;
-    if (n % m != 0){qDebug() << "ERROR! Select n as a multiple of 4 ... "; return;}
-    QList<QPair<int,int> > e;
+    int g = 4;
+    QList<QPair<quint32,quint32> > e;
     std::uniform_real_distribution<double> dis(0,1);
-    int out = 0 ,in = 0;
-    for (int i = 0; i < n; i++)
+    quint64 n = g*l;
+    for (size_t i = 0; i < n; i++)
     {
-        for (int j = i+1; j < n; j++)
+        for (size_t j = i+1; j < n; j++)
         {
             double ran = dis(generator);
             bool edge = false;
             if (i == j)
                 continue;
-            else if (i/v_per_c == j/v_per_c)
+            else if (i/l == j/l) //same cluster
             {
-                if (ran <= z_in)
+                if (ran <= q)
                 {
                     edge = true;
-                    in++;
                 }
             }
-            else
+            else //diff cluster
             {
-                if (ran <= z_out)
+                if (ran <= p)
                 {
                     edge = true;
-                    out++;
                 }
             }
 
             if (edge)
             {
-                QPair<int,int> edge = qMakePair(i,j);
+                QPair<quint32,quint32> edge = qMakePair(i,j);
                 e.append(edge);
             }
         }
     }
 
-    printf("In-edge: %d\nOut-edge: %d\n", in, out);
-    for (int i = 0 ; i < n; i++)
+    for (size_t i = 0 ; i < n; i++)
     {
         Vertex * v = new Vertex;
         v->setIndex(i);
@@ -289,15 +290,15 @@ void Graph::generateHiddenGnp_LargeN(double z_in, double z_out, int n)
     }
     //set the ground truth
     QList<QList<quint32> > C;
-    for (int i = 0; i < m; i++)
+    for (size_t i = 0; i < g; i++)
     {
         QList<quint32> c;
         C.append(c);
     }
 
-    for (int i = 0; i < n;i++)
+    for (size_t i = 0; i < n;i++)
     {
-        quint32 c_id = i/(v_per_c);
+        quint32 c_id = i/l;
         C[c_id].append(i);
     }
 
@@ -1665,7 +1666,6 @@ void Graph::reverse_random_aggregate_with_degree_comparison()
  */
 void Graph::random_aggregate_with_weight_comparison()
 {
-    qDebug() << "HERE";
     if (!checkGraphCondition())
     {
         reConnectGraph();
@@ -2492,18 +2492,27 @@ void Graph::random_aggregate_retain_vertex_using_triangulation()
         std::uniform_int_distribution<quint32> distribution(0,size-1);
         quint32 selected_index = distribution(generator);
         Vertex * selected = players.at(selected_index);
-        Edge * e = selected->getMostMutualVertex();
         Vertex * neighbour, * winner, * loser;
-        if (e->toVertex() == selected)
-            neighbour = e->fromVertex();
+        if (selected->getNumberEdge() == 0)
+        {
+            winner = selected;
+            loser = selected;
+            hierarchy.append(qMakePair(loser->getIndex(), winner->getIndex()));
+        }
         else
-            neighbour = e->toVertex();
+        {
+            Edge * e = selected->getMostMutualVertex();
+            if (e->toVertex() == selected)
+                neighbour = e->fromVertex();
+            else
+                neighbour = e->toVertex();
 
-        winner = neighbour;
-        loser = selected;
-        //create the animation
-        winner->absorb_retainEdge(e);
-        hierarchy.append(qMakePair(loser->getIndex(), winner->getIndex()));
+            winner = neighbour;
+            loser = selected;
+            //create the animation
+            winner->absorb_retainEdge(e);
+            hierarchy.append(qMakePair(loser->getIndex(), winner->getIndex()));
+        }
         players.removeOne(loser);
         t++;
     }
@@ -4075,45 +4084,38 @@ void Graph::LARGE_compute_cluster_matching(quint32 n)
  */
 QList<double> Graph::LARGE_compute_Pairwise_efficient(int n)
 {
-    if (n == -1)
-        n = myVertexList.size();
-    qDebug() << "- STARTING Pairwise Indices ...";
-    qDebug() << "- Number Of unique elements: " << n;
-    qDebug() << "- Number of Clusters:" << large_result.size();
+    if (n == -1)    n = myVertexList.size();
     quint64 nij = 0, nij_minus = 0, nij_square = 0, nij_choose_2 = 0, n_choose_2 = 0;
-    quint64 n_minus_1 = n-1,
-            n_times_n_minus = n*n_minus_1;
+    quint64 n_minus_1 = n-1, n_times_n_minus = n*n_minus_1;
     n_choose_2 = n_times_n_minus/2;
-    qDebug() << "n: " << n
-             << "n*(n-1): " << n_times_n_minus
-             << "n choose 2: " << n_choose_2;
-    int row = ground_truth_communities.size(), column = large_result.size();
-  //  qDebug() << "R:" << row << "; C:" << column;
-    QList<quint64> ni, nj; //ni: sum row, nj: sum column
-    for(int j = 0; j < column; j++)
-        nj.append(0);
 
-    for (int i = 0; i < row; i++)
+    int row = ground_truth_communities.size(), column = large_result.size();
+    std::vector<quint64> ni, nj; //ni: sum row, nj: sum column
+    for(size_t j = 0; j < column; j++)
+        nj.push_back(0);
+
+    for (size_t i = 0; i < row; i++)
     {
         quint64 sum_row = 0;
-        QSet<quint32> X = ground_truth_communities[i].toSet();
+        QList<quint32> X = ground_truth_communities[i];
         for (int j = 0; j < column; j++)
         {
-            QSet<quint32> Y = large_result[j].toSet();
-            QSet<quint32> copy = X;
-            quint32 entry = copy.intersect(Y).size();
-            nij_minus += (quint64)entry*(entry-1); // nij(nij-1)
-            nij_square += (quint64)entry*entry; // nij^2
-            nij_choose_2 += (quint64) entry*(entry-1)/2; //(nij choose 2) for adjust rand
-            nij += (quint64)entry;
-            sum_row += (quint64)entry;
+            QList<quint32> Y = large_result[j];
+            uint32 entry = X.toSet().intersect(Y.toSet()).size(); //sets are assumed to be sorted
+            quint64 entry_square = entry*entry,
+                   entry_entryminus = entry*(entry-1);
+            nij_minus += entry_entryminus; // nij(nij-1)
+            nij_square += entry_square; // nij^2
+            nij_choose_2 += entry_entryminus/2; //(nij choose 2) for adjust rand
+            nij += entry;
+            sum_row += entry;
+            //
             quint64 sum_col = nj[j];
-            sum_col += entry;
-            nj.replace(j, sum_col);
+            quint64 new_sum = entry + sum_col;
+            nj[j] = new_sum;
         }
-        ni.append(sum_row);
+        ni.push_back(sum_row);
     }
-
 
     quint64 n_square = 0,
             ni_sum = 0, //sum row
@@ -4123,37 +4125,46 @@ QList<double> Graph::LARGE_compute_Pairwise_efficient(int n)
             ni_square = 0,  // sum each row square
             nj_square = 0; // sum each column square
 
-    for (int i = 0; i < ni.size(); i++)
+    for (size_t i = 0; i < ni.size(); i++)
     {
-        int entry = ni[i];
-        quint64 entry_square = entry*entry;
+        quint64 entry = ni[i];
+        quint64 entry_square = std::pow(entry,2);
         quint64 entry_choose_2 = entry*(entry-1)/2;
         ni_square += entry_square;
         ni_choose_2 += entry_choose_2;
         ni_sum+=  entry;
     }
-    ni.clear();
-    for (int i = 0; i < nj.size(); i++)
+
+    for (size_t i = 0; i < nj.size(); i++)
     {
-        int entry = nj[i];
+        quint64 entry = nj[i];
         quint64 entry_square = entry*entry;
         quint64 entry_choose_2 = entry*(entry-1)/2;
         nj_square += entry_square;
         nj_choose_2 += entry_choose_2;
         nj_sum+=  entry;
     }
+
+    //check sum
+    quint64 sum_i = 0, sum_j = 0;
+    for (size_t i = 0; i < ni.size(); i++) sum_i += ni[i];
+    for (size_t j = 0; j < nj.size(); j++) sum_j += nj[j];
+    assert((sum_i == sum_j && sum_i == n) && ("FATAL ERROR WHILE CALCULATING PAIRWISE MATCHING"));
+    ni.clear();
     nj.clear();
 
-//    qDebug() << "Sheck sum Pairwise Indicies:" << ni_sum << nj_sum <<(ni_sum == nj_sum);
-//    qDebug() << "ELEMENT:";
-    n_square = qPow(n,2);
-//    qDebug() << "n:" << n << "n^2" << n_square <<"; nij^2:" << nij_square <<"; ni_square" << ni_square << "; nj_square:" << nj_square;
+    n_square = std::pow(n,2);
 
     QList<quint64> param_a,param_b,param_c,param_d;
-    param_a << nij_minus;
-    param_b << ni_square << nij_square;
-    param_c << nj_square << nij_square;
-    param_d << n_square << nij_square << ni_square << nj_square;
+    param_a.push_back(nij_minus);
+    param_b.push_back(ni_square);
+    param_b.push_back(nij_square);
+    param_c.push_back(nj_square);
+    param_c.push_back(nij_square);
+    param_d.push_back(n_square);
+    param_d.push_back(nij_square);
+    param_d.push_back(ni_square);
+    param_d.push_back(nj_square);
 
     quint64 a = calA(param_a);
     quint64 d = calD(param_d);
@@ -4162,15 +4173,23 @@ QList<double> Graph::LARGE_compute_Pairwise_efficient(int n)
 
     double RAND = (double) (a+d)/(a+b+c+d);
     double Jaccard = (double) a/(a+b+c);
+
+    assert((a+b+c+d == n_choose_2) && "FATAL ERROR WHILE CALCULATING PAIRWISE MATCHING");
  //   qDebug() << a/(a+b+c);
     //
     QList<quint64> param_ARI;
-    param_ARI << ni_choose_2 << nj_choose_2 << n_choose_2 << nij_choose_2;
+    param_ARI.push_back(ni_choose_2);
+    param_ARI.push_back(nj_choose_2);
+    param_ARI.push_back(n_choose_2);
+    param_ARI.push_back(nij_choose_2);
     double ARI = calAdRand(param_ARI);
 
+    assert((RAND <= 1 && Jaccard <= 1 && ARI <= 1));
+    printf("RAND: %f\tJaccard: %f\tARI: %f\n", RAND, Jaccard, ARI);
     QList<double> result;
-    result << RAND << Jaccard << ARI;
-    printf("RAND: %f\tJACCARD: %f\tARI: %f\n", RAND, Jaccard, ARI);
+    result.push_back(RAND);
+    result.push_back(Jaccard);
+    result.push_back(ARI);
     return result;
 }
 
@@ -4295,12 +4314,20 @@ void Graph::random_functional_digraph()
         Vertex * selected = myVertexList.at(i); //get v
         //get u
         quint32 dv = selected->getNumberEdge();
-        std::uniform_int_distribution<quint32> distribution2(0,dv-1);
-        quint32 selected_edge_index = distribution2(generator);
-        Edge * e = selected->getEdge(selected_edge_index);
-        Vertex * neighbour = selected->get_neighbour_fromEdge(e); //get the neighbour (not clean)
-        hierarchy.append(qMakePair(selected->getIndex(), neighbour->getIndex()));
-        selected->absorb_retainEdge(e);
+        if (dv == 0)
+        {
+            hierarchy.append(qMakePair(selected->getIndex(), selected->getIndex()));
+            selected->absorb_retainEdge(); //point to self
+        }
+        else
+        {
+            std::uniform_int_distribution<quint32> distribution2(0,dv-1);
+            quint32 selected_edge_index = distribution2(generator);
+            Edge * e = selected->getEdge(selected_edge_index);
+            Vertex * neighbour = selected->get_neighbour_fromEdge(e); //get the neighbour (not clean)
+            hierarchy.append(qMakePair(selected->getIndex(), neighbour->getIndex()));
+            selected->absorb_retainEdge(e);
+        }
         //points to that neighbour
     }
     record_time_and_number_of_cluster(RandomAgg::RFD,t0.elapsed(),0);

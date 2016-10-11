@@ -33,6 +33,7 @@ public:
     void absorb_removeEdge(quint32 edge_index);
     void absorb_removeEdge(Edge * e);
     void absorb_removeVertex_retainEdge(Edge * e);
+    void absorb_retainEdge();
     void absorb_retainEdge(Edge * e);
     void absorb_retainEdge_setParentPointer(Edge * e);
     void absorb_singleton(Vertex * v);

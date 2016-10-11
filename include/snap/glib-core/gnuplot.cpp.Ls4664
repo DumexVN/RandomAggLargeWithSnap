@@ -863,6 +863,7 @@ void TGnuPlot::CreatePlotFile(const TStr& Comment) {
 void TGnuPlot::RunGnuPlot() const {
   TStr GpFNm, GpPath;
   #if defined(GLib_WIN)
+  printf("here");
     GpFNm = "wgnuplot.exe";
     GpPath = "C:\\gnuplot\\bin\\";
   #elif defined(GLib_CYGWIN)
@@ -872,7 +873,6 @@ void TGnuPlot::RunGnuPlot() const {
     GpFNm = "gnuplot";
     GpPath = "/usr/bin/";
   #endif
-
   if (system(TStr::Fmt("%s %s", GpFNm.CStr(), PlotFNm.CStr()).CStr())==0) { return; }
   #if defined(GLib_WIN)
   if (system(TStr::Fmt(".\\%s %s", GpFNm.CStr(), PlotFNm.CStr()).CStr())==0) { return; }

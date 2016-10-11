@@ -354,6 +354,13 @@ void Vertex::absorb_removeVertex_retainEdge(Edge *e)
     neighbour->setParent(this);
 }
 
+// SELF
+void Vertex::absorb_retainEdge()
+{
+    absorbed.append(this);
+    this->setParent(this);
+}
+
 void Vertex::absorb_retainEdge(Edge *e)
 {
     if (!myEdge.contains(e))
@@ -589,15 +596,14 @@ Edge * Vertex::getMostMutualVertex()
     }
     else
         return candidate.at(0);*/
-
     QList<Edge*> ran_list;
     quint32 highest = 0;
     for (int i = 0; i < myEdge.size(); i++)
     {
         Vertex * neighbour = this->get_neighbour_fromEdge(myEdge[i]);
 
-        if (neighbour->getParent() == this)
-            continue;
+     //   if (neighbour->getParent() == this)
+     //       continue;
 
         quint64 similar = this->getNoOfTriangles(neighbour);
         if (similar > highest)
@@ -625,6 +631,7 @@ Edge * Vertex::getMostMutualVertex()
     }
     else
         return ran_list.at(0);
+
 }
 
 

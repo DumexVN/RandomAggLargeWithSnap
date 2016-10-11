@@ -20,7 +20,7 @@ public:
     bool convertSnapCommtoMyComm(const TVec < TCnCom > &CommV, QList<QList<quint32> > &result);
     //some simple Gnp generator
     void generateHiddenGnp(double pin, double pout);
-    void generateHiddenGnp_LargeN(double pin, double pout, int n);
+    void generateHiddenGnp_LargeN(double pin, double pout, quint32 l);
     void generateSimpleCycle(const int &n);
     void generateBinaryTree(const int &h);
     //
