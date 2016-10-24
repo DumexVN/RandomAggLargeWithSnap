@@ -80,6 +80,7 @@ public:
     void random_aggregate_greedy_max_weight();
     //agg without 'removing' vertices
     void random_aggregate_retain_vertex_using_triangulation();
+    void random_aggregate_retain_vertex_using_colin_triangulation();
     void random_aggregate_retain_vertex_using_probabilistic_triangulation();
     void random_aggregate_retain_vertex_using_triangulation_times_weight();
     void random_aggregate_retain_vertex_using_triangulation_of_cluster();

@@ -2564,7 +2564,8 @@ void Graph::random_aggregate_retain_vertex_using_colin_triangulation()
         for (int j = 0 ; j < adj_v.size(); j++)
         {
             //get CT(u)
-            quint32 u_tri = tri[adj_v[j]]; //get CT(u) - u index is adj_v[j]
+            assert((adj_v[j] >= tri.size()), "HERE");
+            quint32 u_tri = tri[adj_v[j]];
             if (u_tri == highest_tri)   dup_max_tri.append(j);//we need the index
             else if (u_tri > highest_tri)
             {
@@ -2573,14 +2574,15 @@ void Graph::random_aggregate_retain_vertex_using_colin_triangulation()
                 dup_max_tri.append(j); //insert u index
             }
         }
-        //selecting one with highest CT()
-        if (CT_v >= highest_tri)            hierarchy.append(qMakePair(i, i)); //root
-        else if (dup_max_tri.size() == 1)   hierarchy.append(qMakePair(i, dup_max_tri[0])); //directed edge
+        if (CT_v >= highest_tri)
+            hierarchy.append(qMakePair(i, i)); //root
+        else if (dup_max_tri.size() == 1)
+            hierarchy.append(qMakePair(i, dup_max_tri[0])); //directed edge
         else if (dup_max_tri.size() > 1)
         {
             std::uniform_int_distribution<quint32> distribution(0,dup_max_tri.size()-1);
             quint32 selected = distribution(generator);
-            hierarchy.append(qMakePair(i, dup_max_tri[selected]));
+            hierarchy.append(qMakePair(i, selected));
         }
     }
     record_time_and_number_of_cluster(RandomAgg::III_z,t0.elapsed(),0); // the number of cluster is only determine later on
@@ -3570,7 +3572,7 @@ void Graph::create_time_and_number_of_cluster_file()
           << "II.a"<< "II.a.i"<< "II.b"<< "II.b.i"<< "II.c"<< "II.d"<< "II.e"<< "II.f"<< "II.g"<< "II.h"
           << "III.a"<< "III.b"<< "III.c"<< "III.d"<< "III.e"
           << "GN_Clustering"<< "CNM_Clustering"
-          << "R1a"<<"I_x"<< "RFD" << "III.z";
+          << "R1a"<<"I_x"<< "RFD";
     for(int i = 0; i < types.size(); i++)
     {
         out << types[i] << '\t' << QString::number(0) << '\t' << QString::number(0) << '\n';

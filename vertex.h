@@ -88,6 +88,8 @@ public:
 
     void resetClusterRelevant();
 
+    quint32 getNumberOfColinTriangles();
+    bool isNeighbour(const quint32 &u);
 private:
 
     Vertex * parent;

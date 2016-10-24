@@ -898,3 +898,40 @@ void Vertex::resetClusterRelevant()
     }
     myEdge.clear();
 }
+
+/** Count the number of Colin's Triangles i.e. number of pair of neighbours that have a triangle
+ * @brief Vertex::getNumberOfColinTriangles
+ * @return
+ */
+quint32 Vertex::getNumberOfColinTriangles()
+{
+    quint32 count = 0;
+    for (int i = 0; i < myEdge.size(); i++)
+    {
+        Edge * e = myEdge.at(i);
+        //get u
+        Vertex * u;
+        if (e->fromVertex()==this)  u = e->toVertex();
+        else    u = e->fromVertex();
+        for (int j = i+1; j < myEdge.size(); j++)
+        {
+            Edge * e2 = myEdge.at(j);
+            //get w
+            Vertex * w;
+            if (e2->fromVertex()==this)  w = e2->toVertex();
+            else    w = e2->fromVertex();
+            quint32 w_i = w->getIndex();
+            if (u->isNeighbour(w_i))    count++;
+        }
+    }
+    return count;
+}
+/**
+ * @brief Vertex::isNeighbour: check if a given index is a neighbour
+ * @param u: index of neighbour u
+ * @return
+ */
+bool Vertex::isNeighbour(const quint32 &u)
+{
+    return myNeighbours.contains(u);
+}

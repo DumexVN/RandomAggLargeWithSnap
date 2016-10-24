@@ -24,7 +24,8 @@ enum RandomAgg { I_a, I_b, I_c,
                  GN_Clustering, CNM_Clustering,
                  R1a,
                  I_x,
-                 RFD
+                 RFD,
+                 III_z
                };
 const char *name[] = { "I.a", "I.b", "I_c",
                        "II.a", "II.a.i", "II.b", "II.b.i", "II.c", "II.d", "II.e", "II.f", "II.g", "II.h",
@@ -32,7 +33,8 @@ const char *name[] = { "I.a", "I.b", "I_c",
                        "GN_Clustering", "CNM_Clustering",
                        "R1a",
                        "I_x",
-                       "RFD"
+                       "RFD",
+                       "III.z"
                      };
 /** Override Debug Message Handler
  * @brief myMessageOutput
@@ -144,6 +146,7 @@ void plotMatrix(const QList<QList<double> > &matrix, QString str)
     plotV[3].AddPlot(AllSeries[RandomAgg::GN_Clustering], gpwLinesPoints, name[RandomAgg::GN_Clustering]);
     plotV[3].AddPlot(AllSeries[RandomAgg::CNM_Clustering], gpwLinesPoints, name[RandomAgg::CNM_Clustering]);
     plotV[3].AddPlot(AllSeries[RandomAgg::RFD], gpwLinesPoints, name[RandomAgg::RFD]);
+    plotV[3].AddPlot(AllSeries[RandomAgg::III_z], gpwLinesPoints, name[RandomAgg::III_z]);
 
     //export as png
     for (int i = 0; i < plotV.Len();i++)
@@ -340,23 +343,24 @@ void GN_experiment()
 void LARGE_Gnp_experiment()
 {
     int step = 10;
-    quint32 ell = 2500, n = ell*4;
+    quint32 ell = 1000, n = ell*4;
     double kin_threshold = std::pow((double)ell,(double)1/2),
         kout_threshold = std::pow((double)(ell*3),(double)1/2);
     double p_threshold = kout_threshold/(ell*3),
            q_threshold = kin_threshold/ell;
     double p_stepsize = p_threshold/step;
 
-    double test_q = q_threshold+0.01;
+    double test_q = q_threshold*2;
+    test_q = 0.6;
 
     QList<int> blocked_type;
-    blocked_type << 18 << 19;
+    blocked_type << 18 << 19 << 0 << 1 << 2 << 3 << 4 << 5 << 6 << 7 << 8 << 9 << 10 << 11 << 12;
 
     QList<QList<double> > RAND, JACCARD, ARI, Q, GN;
     for (double p = 0.0; p <= p_threshold; p += p_stepsize)
     {
         QList<double> sRAND, sJACCARD, sARI, sQ, sGN; //s = Set
-        for (int k = 0; k <= 22; k++)
+        for (int k = 0; k <= 23; k++)
         {
             qDebug() << "-------------------------- New Algorithm -------------------- [p: " << p << " - thres:" << p_threshold << "]" ;
             //generate GN graph
@@ -387,6 +391,7 @@ void LARGE_Gnp_experiment()
             else if (k == 20){mess.append(QString( "********** R1a ************ /n"));}
             else if (k == 21){mess.append(QString( "********** I.x ************ /n"));}
             else if (k == 22){mess.append(QString( "********** RFD ************ /n"));}
+            else if (k == 23){mess.append(QString( "********** III.z ************ /n"));}
             else{}
             for (int i = 0 ; i < times; i++)
             {
@@ -428,6 +433,7 @@ void LARGE_Gnp_experiment()
                     else if (k == 20){G.reverse_random_aggregate();}
                     else if (k == 21){G.reverse_random_aggregate_with_degree_comparison();}
                     else if (k == 22){G.random_functional_digraph();}
+                    else if (k == 23){G.random_aggregate_retain_vertex_using_colin_triangulation();}
                     QList<double> id = G.LARGE_compute_Pairwise_efficient(n); //param -1 set n to |V|
                     iRAND+=id[0];
                     iJACCARD+=id[1];

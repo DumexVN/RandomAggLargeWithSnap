@@ -2573,16 +2573,20 @@ void Graph::random_aggregate_retain_vertex_using_colin_triangulation()
                 dup_max_tri.append(j); //insert u index
             }
         }
-        //selecting one with highest CT()
-        if (CT_v >= highest_tri)            hierarchy.append(qMakePair(i, i)); //root
-        else if (dup_max_tri.size() == 1)   hierarchy.append(qMakePair(i, dup_max_tri[0])); //directed edge
+        /*
+        if (CT_v >= highest_tri)
+            hierarchy.append(qMakePair(i, i)); //root
+        else if (dup_max_tri.size() == 1)
+            hierarchy.append(qMakePair(i, dup_max_tri[0])); //directed edge
         else if (dup_max_tri.size() > 1)
         {
             std::uniform_int_distribution<quint32> distribution(0,dup_max_tri.size()-1);
             quint32 selected = distribution(generator);
+            qDebug() << selected << dup_max_tri.size();
             hierarchy.append(qMakePair(i, dup_max_tri[selected]));
-        }
+        }*/
     }
+    return;
     record_time_and_number_of_cluster(RandomAgg::III_z,t0.elapsed(),0); // the number of cluster is only determine later on
     qDebug("III.z - Time elapsed: %d ms", t0.elapsed());
     large_parse_retain_result();
