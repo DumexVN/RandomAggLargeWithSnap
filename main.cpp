@@ -330,18 +330,22 @@ void GN_experiment()
 /** LARGE gnp experiment
  * See note for more details
  * q >> p
- * p < Tria_threshold derived from first principal
+ * p < Tria_threshold derived from first principal (
+ * (There are two thresholds for triangulation on Gnp:
+ * 1. Vu's definition: on edge
+ * 2. Colin's definition: on vertex
+ * )
  * @brief LARGE_GN_experiment
  */
 void LARGE_Gnp_experiment()
 {
-    int stepsize = 10;
+    int step = 10;
     quint32 ell = 2500, n = ell*4;
-    double kin_threshold = std::pow((double)ell,(double)1/3),
-        kout_threshold = std::pow((double)(ell*3),(double)1/3);
+    double kin_threshold = std::pow((double)ell,(double)1/2),
+        kout_threshold = std::pow((double)(ell*3),(double)1/2);
     double p_threshold = kout_threshold/(ell*3),
            q_threshold = kin_threshold/ell;
-    double p_stepsize = p_threshold/stepsize;
+    double p_stepsize = p_threshold/step;
 
     double test_q = q_threshold+0.01;
 
@@ -1244,8 +1248,8 @@ int main(int argc, char *argv[])
    // qInstallMessageHandler(myMessageOutput);
     //Large Test for LFR
     qDebug() << "Large Gnp Experiments Initialised";
-    workingDir = "C:/Users/Dumex/Desktop/SocialNetworksCollection/SimpleCycle/";
-    RandomMappingOnACycle_Exp();
+    workingDir = "C:/Users/Dumex/Desktop/SocialNetworksCollection/Triangle_Gnp/";
+    LARGE_Gnp_experiment();
     return 0;
 
 /*
