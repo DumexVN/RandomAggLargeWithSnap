@@ -153,7 +153,7 @@ void plotMatrix(const QList<QList<double> > &matrix, QString str)
     {
         TGnuPlot Gp = plotV[i];
         Gp.SetXYLabel("Z_out", label);
-        Gp.SavePng(label);
+        Gp.SavePng(label+".png");
     }
 }
 
@@ -344,20 +344,22 @@ void LARGE_Gnp_experiment()
 {
     int step = 10;
     quint32 ell = 1000, n = ell*4;
-    double kin_threshold = std::pow((double)ell,(double)1/2),
-        kout_threshold = std::pow((double)(ell*3),(double)1/2);
+    double global_p_threshold = std::pow((double)n,(double)1/2);
+    double layer_q = 0.6,
+           p_stepsize = global_p_threshold/step;
+    /*kout_threshold = std::pow((double)(ell*3),(double)1/2);
     double p_threshold = kout_threshold/(ell*3),
            q_threshold = kin_threshold/ell;
-    double p_stepsize = p_threshold/step;
+    double p_stepsize = p_threshold/step;*/
 
-    double test_q = q_threshold*2;
-    test_q = 0.6;
+
+    //test_q = 0.6;
 
     QList<int> blocked_type;
-    blocked_type << 18 << 19 << 0 << 1 << 2 << 3 << 4 << 5 << 6 << 7 << 8 << 9 << 10 << 11 << 12;
+//    blocked_type << 18 << 19 << 0 << 1 << 2 << 3 << 4 << 5 << 6 << 7 << 8 << 9 << 10 << 11 << 12;
 
     QList<QList<double> > RAND, JACCARD, ARI, Q, GN;
-    for (double p = 0.0; p <= p_threshold; p += p_stepsize)
+    for (double p = 0.0; p <= global_p_threshold; p += p_stepsize)
     {
         QList<double> sRAND, sJACCARD, sARI, sQ, sGN; //s = Set
         for (int k = 0; k <= 23; k++)
@@ -368,30 +370,30 @@ void LARGE_Gnp_experiment()
             int times = 3;
             double iRAND = 0.0 , iJACCARD = 0.0, iARI = 0.0, iQ = 0.0, iGN = 0.0; // i = iterator
             QString mess;
-            if (k == 0) {mess.append(QString("********** I.a ************ /n"));}
-            else if (k == 1) {mess.append(QString( "********** I.b ************ /n"));}
-            else if (k == 2) {mess.append(QString( "********** I.c ************ /n"));}
-            else if (k == 3) {mess.append(QString( "********** II.a ************ /n"));}
-            else if (k == 4){mess.append(QString( "********** II.a(i) ************ /n"));}
-            else if (k == 5) {mess.append(QString( "********** II.b ************ /n"));}
-            else if (k == 6){mess.append(QString( "********** II.b(i) ************ /n"));}
-            else if (k == 7) {mess.append(QString( "********** II.c ************ /n"));}
-            else if (k == 8) {mess.append(QString( "********** II.d ************ /n"));}
-            else if (k == 9) {mess.append(QString( "********** II.e ************ /n"));}
-            else if (k == 10) {mess.append(QString( "********** II.f ************ /n"));}
-            else if (k == 11) {mess.append(QString( "********** II.h ************ /n"));}
-            else if (k == 12){mess.append(QString( "********** II.g ************ /n"));}
-            else if (k == 13){mess.append(QString( "********** III.a ************ /n"));}
-            else if (k == 14){mess.append(QString( "********** III.b ************ /n"));}
-            else if (k == 15){mess.append(QString( "********** III.c ************ /n"));}
-            else if (k == 16){mess.append(QString( "********** III.d ************ /n"));}
-            else if (k == 17){mess.append(QString( "********** III.e ************ /n"));}
-            else if (k == 18){mess.append(QString( "********** Betweenness Centrality Clustering ************ /n")); times = 1;}
-            else if (k == 19){mess.append(QString( "********** CNM Clustering ************ /n")); times = 1;}
-            else if (k == 20){mess.append(QString( "********** R1a ************ /n"));}
-            else if (k == 21){mess.append(QString( "********** I.x ************ /n"));}
-            else if (k == 22){mess.append(QString( "********** RFD ************ /n"));}
-            else if (k == 23){mess.append(QString( "********** III.z ************ /n"));}
+            if (k == 0) {mess.append(QString("********** I.a ************ \n"));}
+            else if (k == 1) {mess.append(QString( "********** I.b ************ \n"));}
+            else if (k == 2) {mess.append(QString( "********** I.c ************ \n"));}
+            else if (k == 3) {mess.append(QString( "********** II.a ************ \n"));}
+            else if (k == 4){mess.append(QString( "********** II.a(i) ************ \n"));}
+            else if (k == 5) {mess.append(QString( "********** II.b ************ \n"));}
+            else if (k == 6){mess.append(QString( "********** II.b(i) ************ \n"));}
+            else if (k == 7) {mess.append(QString( "********** II.c ************ \n"));}
+            else if (k == 8) {mess.append(QString( "********** II.d ************ \n"));}
+            else if (k == 9) {mess.append(QString( "********** II.e ************ \n"));}
+            else if (k == 10) {mess.append(QString( "********** II.f ************ \n"));}
+            else if (k == 11) {mess.append(QString( "********** II.h ************ \n"));}
+            else if (k == 12){mess.append(QString( "********** II.g ************ \n"));}
+            else if (k == 13){mess.append(QString( "********** III.a ************ \n"));}
+            else if (k == 14){mess.append(QString( "********** III.b ************ \n"));}
+            else if (k == 15){mess.append(QString( "********** III.c ************ \n"));}
+            else if (k == 16){mess.append(QString( "********** III.d ************ \n"));}
+            else if (k == 17){mess.append(QString( "********** III.e ************ \n"));}
+            else if (k == 18){mess.append(QString( "********** Betweenness Centrality Clustering ************ \n")); times = 1;}
+            else if (k == 19){mess.append(QString( "********** CNM Clustering ************ \n")); times = 1;}
+            else if (k == 20){mess.append(QString( "********** R1a ************ \n"));}
+            else if (k == 21){mess.append(QString( "********** I.x ************ \n"));}
+            else if (k == 22){mess.append(QString( "********** RFD ************ \n"));}
+            else if (k == 23){mess.append(QString( "********** III.z ************ \n"));}
             else{}
             for (int i = 0 ; i < times; i++)
             {
@@ -408,7 +410,7 @@ void LARGE_Gnp_experiment()
                     qDebug() << "----------- New Gnp ---------- [k: " << (k) << " ]";
                     Graph G;
                     G.manual_set_working_dir(workingDir);
-                    G.generateHiddenGnp_LargeN(test_q,p,ell);
+                    G.generateHiddenGnp_LargeN_layered(p, layer_q, l);
                     writeEdgeFile(G);
                     if (k == 0) {G.random_aggregate();}
                     else if (k == 1) {G.random_aggregate_with_degree_comparison(); }
@@ -456,7 +458,7 @@ void LARGE_Gnp_experiment()
             QFile file(workingDir +"Stat.txt");
             file.open(QFile::Text | QFile::Append);
             QTextStream out(&file);
-            mess.append(QString("%1/t%2/t%3/t%4/t%5/t%6/n").arg(normalisedRand).arg(normalisedJaccard).arg(normalisedARI).arg(normalisedQ).arg(normalisedGN).arg(p));
+            mess.append(QString("%1\t%2\t%3\t%4\t%5\t%6\n").arg(normalisedRand).arg(normalisedJaccard).arg(normalisedARI).arg(normalisedQ).arg(normalisedGN).arg(p));
             out << mess;
             file.close();
         }

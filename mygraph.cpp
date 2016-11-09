@@ -309,6 +309,96 @@ void Graph::generateHiddenGnp_LargeN(double q, double p, quint32 l)
            myVertexList.size(), myEdgeList.size(), ground_truth_communities.size());
 }
 
+
+/** Gnp with large N,
+ * see note for more details i.e. threshold, q and p
+ * let G = g.l where g is the number of hidden clusters and l is the number of vertices in cluster
+ * edges are now added globally with an extra layered for each dedicated cluster
+ * @brief Graph::generateHiddenGnp_LargeN_layerred
+ * @param pin
+ * @param pout
+ * @param n
+ */
+
+void Graph::generateHiddenGnp_LargeN_layered(double global_p, double layer_q, quint32 l)
+{
+    if (myVertexList.size() > 0 || myEdgeList.size() > 0)
+    {
+        myVertexList.clear();
+        myEdgeList.clear();
+    }
+    int g = 4;
+    QList<QPair<quint32,quint32> > e;
+    std::uniform_real_distribution<double> dis(0,1);
+    quint64 n = g*l;
+    for (size_t i = 0; i < n; i++)
+    {
+        for (size_t j = i+1; j < n; j++)
+        {
+            double ran1 = dis(generator);
+            bool edge = false;
+            if (i == j)
+                continue;
+            else //diff cluster
+            {
+                if (ran1 <= global_p)
+                {
+                    edge = true;
+                }
+            }
+
+            if ((!edge) && (i/g == j/g))
+            {
+                double ran2 = dis(generator);
+                if (ran2 <= layer_q)
+                {
+                    edge = true;
+                }
+            }
+
+            if (edge)
+            {
+                QPair<quint32,quint32> edge = qMakePair(i,j);
+                e.append(edge);
+            }
+        }
+    }
+
+    for (size_t i = 0 ; i < n; i++)
+    {
+        Vertex * v = new Vertex;
+        v->setIndex(i);
+        myVertexList.append(v);
+    }
+
+    for (int i = 0 ; i < e.size(); i++)
+    {
+        QPair<int,int>  edge = e.at(i);
+        Edge * new_e = new Edge(myVertexList.at(edge.first),
+                                myVertexList.at(edge.second),
+                                i);
+        myEdgeList.append(new_e);
+    }
+    //set the ground truth
+    QList<QList<quint32> > C;
+    for (size_t i = 0; i < g; i++)
+    {
+        QList<quint32> c;
+        C.append(c);
+    }
+
+    for (size_t i = 0; i < n;i++)
+    {
+        quint32 c_id = i/l;
+        C[c_id].append(i);
+    }
+
+    graphIsReady = true;
+    ground_truth_communities = C;
+    printf("- Hidden Partition Generated: \nV: %d\nE: %d\nGround Truth Comm: %d\n",
+           myVertexList.size(), myEdgeList.size(), ground_truth_communities.size());
+}
+
 /** Generate A Simple Cycle
  * @brief Graph::generateSimpleCycle
  * @param n

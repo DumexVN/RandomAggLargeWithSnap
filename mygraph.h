@@ -21,6 +21,7 @@ public:
     //some simple Gnp generator
     void generateHiddenGnp(double pin, double pout);
     void generateHiddenGnp_LargeN(double pin, double pout, quint32 l);
+    void generateHiddenGnp_LargeN_layered(double global_p, double layer_q, quint32 l);
     void generateSimpleCycle(const int &n);
     void generateBinaryTree(const int &h);
     //
