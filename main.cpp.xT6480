@@ -1270,16 +1270,16 @@ int main(int argc, char *argv[])
      * Below is for recursive IIIa on Gnp
      */
      //first generate Gnp
-        quint32 ell = 2000, n = ell*4;
+        quint32 ell = 1000, n = ell*4;
         double trian_threshold = std::pow((double)n,(double)1/2),
                global_p_threshold = (double)trian_threshold/n;
-        double layer_q = 0.06;
+        double layer_q = 0.05;
         workingDir = "C:/Users/Dumex/Desktop/IIIa_Experiment/j_k_max_neighbours/";
         Graph G;
         G.manual_set_working_dir(workingDir);
         G.generateHiddenGnp_LargeN_layered(global_p_threshold, layer_q, ell);
         writeEdgeFile(G);
-        G.IIIa_triangulation_j_from_k_max_neighbours(2, 40);
+        G.IIIa_triangulation_j_from_k_max_neighbours(1, 10);
         qDebug() << G.fraction_of_correct_mapping(ell);
         qDebug() << G.compute_majorities_membership(ell);
 

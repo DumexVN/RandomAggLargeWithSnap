@@ -463,6 +463,43 @@ Edge *Vertex::getHighestDegreeNeighbour()
     return final;
 }
 
+/**
+ * @brief Vertex::getKMostMutualNeighbours
+ * get K number of most mutual vertex
+ * @param max:
+ */
+void Vertex::getKMostMutualNeighbours(QList<Edge *> &max, const int k)
+{
+    //get the triangluation with all neighbours
+    QMap<int, Edge*> neighbourMap;
+    for (int i = 0; i < myEdge.size(); i++)
+    {
+        Vertex * neighbour = this->get_neighbour_fromEdge(myEdge[i]);
+
+     //   if (neighbour->getParent() == this)
+     //       continue;
+
+        quint64 numTriangle = this->getNoOfTriangles(neighbour);
+        if (neighbourMap.contains(numTriangle))   neighbourMap.insertMulti(numTriangle, myEdge[i]);
+        else    neighbourMap.insert(numTriangle, myEdge[i]);
+    }
+    QList<int> keys = neighbourMap.keys();
+    //sort num of mutual triangles
+    qSort(keys.begin(), keys.end(), qGreater<int>());
+    int numEdgeReturned = 0;
+    for (int i = 0; i < keys.size(); i++)
+    {
+        QList<Edge*> edgeList = neighbourMap.values(keys[i]);
+        for( int j = 0; j < edgeList.size(); j++)
+        {
+            if (numEdgeReturned == k)   break;
+            max.append(edgeList[j]);
+            numEdgeReturned++;
+        }
+    }
+}
+
+
 QList<Edge *> Vertex::getAllEdge() const
 {
     return myEdge;

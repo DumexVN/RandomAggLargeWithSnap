@@ -45,6 +45,7 @@ public:
     Edge * getSmallestCurrentDegreeNeighbour();
     Edge * getSmallestCurrentWeightNeighbour();
     Edge * getHighestDegreeNeighbour();
+    void getKMostMutualNeighbours(QList<Edge*> &max, const int k);
     Edge * getMostMutualVertex();
     Edge * getHighestTriangulateCluster();
     Edge * getProbabilisticTriangulationCoeffVertex();

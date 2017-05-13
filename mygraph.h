@@ -33,6 +33,7 @@ public:
     void save_edge_file_from_GML();
     void save_current_run_as_edge_file(QString fileName);
     void save_current_run_summary_file(QString fileName);
+    void save_hierarchy_tree(QString fileName);
     void read_DUMEX_input(QString dirPath);
     void read_simple_edge(QString dirPath);
     void read_edge(QString dirPath);
@@ -46,7 +47,9 @@ public:
     double LARGE_compute_modularity();
     double LARGE_compute_modularit_for_truth();
     quint32 count_result_connected_component();
-    double compute_GN_index();
+    double compute_GN_index(int l);
+    double compute_majorities_membership(int l);
+    double fraction_of_correct_mapping(int l);
     //run
     void run_aggregation_on_selection(int n);
     void LARGE_hard_reset();
@@ -80,6 +83,11 @@ public:
     void random_aggregate_greedy_max_degree();
     void random_aggregate_greedy_max_weight();
     //agg without 'removing' vertices
+    void IIIaFindRoot(QList<quint32> &roots, int degreeType);
+    void reconstructGraphRecursiveIIIa(QList<quint32> &roots);
+    void recursive_IIIa();
+    void IIIa_triangulation_k_max_neighbours(const int &k);
+    void IIIa_triangulation_j_from_k_max_neighbours(const int &j, const int &k);
     void random_aggregate_retain_vertex_using_triangulation();
     void random_aggregate_retain_vertex_using_colin_triangulation();
     void random_aggregate_retain_vertex_using_probabilistic_triangulation();

@@ -347,7 +347,7 @@ void Graph::generateHiddenGnp_LargeN_layered(double global_p, double layer_q, qu
                 }
             }
 
-            if ((!edge) && (i/g == j/g))
+            if ((!edge) && (i/l == j/l))
             {
                 double ran2 = dis(generator);
                 if (ran2 <= layer_q)
@@ -1181,6 +1181,29 @@ void Graph::save_current_run_summary_file(QString fileName)
     QTextStream ts(&outFile);
     ts << "Vertex\tEdge" << endl;
     ts << QString::number(myVertexList.size()) << "\t" << QString::number(myEdgeList.size()) << endl;
+    outFile.close();
+}
+
+/**
+ * @brief Graph::save_hierarchy_tree Save the current hierarchy for this round
+ * Hierarchy here reflects the components, which are 1-out edge graph with tree-like structures
+ * @param fileName
+ */
+void Graph::save_hierarchy_tree(QString fileName)
+{
+    //prepare filepath
+    QString absolutePath = globalDirPath + fileName;
+    QFile outFile(absolutePath);
+    if (outFile.exists())
+        outFile.remove();
+    outFile.open(QIODevice::WriteOnly | QIODevice::Text);
+    QTextStream ts(&outFile);
+    ts << "Source\tTarget" << endl;
+    for (int i = 0; i < hierarchy.size(); i++)
+    {
+        QPair<quint32, quint32> edge = hierarchy.at(i);
+        ts << QString::number(edge.first) << "\t" << QString::number(edge.second) << endl;
+    }
     outFile.close();
 }
 
@@ -2476,7 +2499,6 @@ void Graph::random_aggregate_greedy_max_weight()
     large_graph_parse_result();
 }
 
-
 /** Type III.c - Select Highest Triangles Neighbour Destructive
  * Pr(v) = u.a.r
  * Select u: arg max tri(u) forall u in adj(v)
@@ -2556,12 +2578,334 @@ void Graph::random_aggregate_with_highest_triangulated_vertex()
 }
 
 // ---------------------------------------- AGGREGATION WHITE RETAINING VERTEX -----------------------------
+
+
+/** Reconstruct IIIa graph
+ * @brief Graph::reconstructGraphRecursiveIIIa
+ * @param QList<quint32> roots: an array of roots
+ * create a new graph G1 which is a vertex-induced subgraph of G0
+ * vertices of G1 is root
+ */
+void Graph::reconstructGraphRecursiveIIIa(QList<quint32> &roots)
+{
+    //reset all params
+    LARGE_hard_reset();
+    //roots into new vertex
+    QSet<quint32> unique_roots = roots.toSet();
+    for(int i = 0; i < roots.size(); i++)
+    {
+        Vertex * v = new Vertex;
+        v->setIndex(roots.at(i));
+        myVertexList.append(v);
+    }
+    roots.clear();
+    //recreating edges
+    QDir dir(globalDirPath);
+    QStringList filters;
+    filters << "*.txt";
+    QFileInfoList file = dir.entryInfoList(filters);
+    QString e_file;
+    for (int i = 0; i < file.size(); i++)
+    {
+        QFileInfo f = file.at(i);
+        QString name = f.fileName();
+        if (name.contains("edge"))
+            e_file = f.absoluteFilePath();
+    }
+    //Parsing
+    QFile efile(e_file);
+    if (!efile.exists())
+    {
+        qDebug() << "FILE NOT FOUND! Recheck! Terminating ...";
+        return;
+    }
+    //else
+    efile.open(QFile::ReadOnly | QFile::Text);
+    QTextStream ein(&efile);
+    QList<QPair<quint32,quint32> > edge;
+    ein.readLine(); //skip first line
+    while (!ein.atEnd())
+    {
+        QStringList str = ein.readLine().split('\t');
+        if(str[0].startsWith("#")) continue;
+        bool ok;
+        quint32 v1 = str[0].toUInt(&ok), v2 = str[1].toUInt(&ok);
+        if (ok)
+        {
+            edge.append(qMakePair(v1,v2));
+        }
+    }
+    efile.close();
+    //reload original vertices
+    //create Vertex and Edge object
+    qDebug() << "- Now Loading Edges ...";
+    int edge_no = 0;
+    for (int i = 0; i < edge.size(); i++)
+    {
+        QPair<quint32,quint32> p = edge[i];
+        quint32 from = p.first, to = p.second;
+        if (!unique_roots.contains(from) || !unique_roots.contains(to))
+                continue;
+        Vertex * vfrom, * vto;
+        for (int j = 0; j < myVertexList.size(); j++)
+        {
+            Vertex * v = myVertexList.at(j);
+            if (v->getIndex() == from)  vfrom = v;
+            else if (v->getIndex() == to) vto = v;
+        }
+        Edge * e = new Edge(vfrom, vto, edge_no);
+        edge_no++;
+        myEdgeList.append(e);
+    }
+    edge.clear();
+    //finally, reindex vertices
+    for (int i = 0; i < myVertexList.size(); i++)   myVertexList.at(i)->setIndex(i);
+    graphIsReady = true;
+    qDebug() << "Current No of Edge: " << myEdgeList.size();
+}
+
+/**
+ * @brief Graph::IIIaFindRoot
+ * @param roots: list of roots which will be appended
+ * As each component is an unicyclic, if it is a perfect cycle i.e. 1->2->3->4->1, pick 1 u.a.r
+ * else return the one with in-degree 2 i.e. 1->2->3->4->3, return 3
+ * @param: degreeType: 1. for in-degree of component
+ * 2. for graph degree
+ */
+void Graph::IIIaFindRoot(QList<quint32> &roots, int degreeType)
+{
+     //initialise degree array
+    QList<int> selectiveDegree;
+    for (int i = 0; i < myVertexList.size(); i++)   selectiveDegree << 0;
+    //count indegree
+    for (int i = 0; i < hierarchy.size(); i++)
+    {
+        QPair<quint32,quint32> p = hierarchy.at(i);
+        if (degreeType == 1)   selectiveDegree[p.second]++; //in-degree from the component
+        else if (degreeType == 2)
+        { //degree = graph degree
+            //get the graph degree of vertex
+            int graphDegree = myVertexList.at(p.first)->getNumAdj();
+            selectiveDegree[p.first] = graphDegree;
+        }
+    }
+    //for each clusters look for root which is a vertex of indegree 2
+    //otherwise pick 1 u.a.r
+    for (int i = 0; i < large_result.size(); i++)
+    {
+        QList<quint32> component = large_result.at(i);
+        int highest_deg = 0;
+        QList<int> highest_deg_index;
+        bool hasRoot = false; //hasRoot: has proper root of indegree 2
+        for (int j = 0; j < component.size(); j++)
+        {
+            quint32 v_index = component.at(j);
+            //check indegree of v
+            int v_deg = selectiveDegree[v_index];
+            if (v_deg > highest_deg)
+            {
+                highest_deg = v_deg;
+                highest_deg_index.clear();
+                highest_deg_index.append(v_index);
+            }
+            else if (v_deg == highest_deg)  highest_deg_index.append(v_deg);
+        }
+        if (highest_deg_index.size() == 1)  roots.append(highest_deg_index[0]);
+        else
+        {
+            //a cycle, return 1 u.a.r
+            quint32 size = highest_deg_index.size();
+            std::uniform_int_distribution<quint32> distribution(0,size-1);
+            quint32 v_ran = distribution(generator);
+            roots.append(highest_deg_index.at(v_ran));
+        }
+    }
+    assert(roots.size() == large_result.size()  && ("Number of Roots and Number of Components Do Not Match!"));
+}
+
+/** Recursive IIIa
+ * @brief Graph::recursive_IIIa
+ * Do IIIa recursively
+ * V <- V'; then do III.a, let the results set be C
+ * C <- V'; and so on.
+ */
+void Graph::recursive_IIIa()
+{
+    QList<quint32> roots;
+    int iteration = 0;
+    while (true)
+    {
+        //prepare graph
+        if (!graphIsReady)
+        {
+            reconstructGraphRecursiveIIIa(roots);
+            if (myEdgeList.size() == 0) break;
+            //save snap shot after one is done i.e. G1
+            QString toSaveFilePath = "G_" + QString::number(iteration) + ".txt" ;
+            save_current_run_as_edge_file(toSaveFilePath);
+        }
+        //do IIIa
+        qDebug() << "Current Graph:";
+        qDebug() << "no Vertex: " << myVertexList.size() << " -- no Edge:" << myEdgeList.size();
+        random_aggregate_retain_vertex_using_triangulation();
+        //parse result
+        //get the list of root
+        roots.clear();
+        IIIaFindRoot(roots, 2);
+        //fracmap
+        qDebug() << "----- One Iter Done -----";
+        double fracMap = fraction_of_correct_mapping(1000);
+        qDebug() << "fracMap:" << fracMap;
+        qDebug() << "No of Root: " << roots.size();
+        //break if some condition is satisfied
+        //maybe if there is no edge
+        if(roots.size() <= 4)    break;
+        iteration++;
+        QString componentFilePath = "G_comp_" + QString::number(iteration) + ".txt" ;
+        save_hierarchy_tree(componentFilePath);
+    }
+    //prepare graph
+}
+
+/**
+ * @brief Graph::IIIa_triangulation_k_max_neighbours
+ * Instead of only 1, selecting k max neighbour
+ */
+void Graph::IIIa_triangulation_k_max_neighbours(const int &k)
+{
+    //
+    hierarchy.clear();
+    if (!checkGraphCondition())
+    {
+        reConnectGraph();
+    }
+    //initialise arrays
+    QList<Vertex*> players = myVertexList;
+    quint32 t = 0;
+    QTime t0;
+    t0.start();
+
+    while(!players.empty()) //start
+    {
+        //select a vertex uniformly at random
+        quint32 size = players.size();
+        std::uniform_int_distribution<quint32> distribution(0,size-1);
+        quint32 selected_index = distribution(generator);
+        Vertex * selected = players.at(selected_index);
+        Vertex * neighbour, * winner, * loser;
+        if (selected->getNumberEdge() == 0)
+        {
+            winner = selected;
+            loser = selected;
+            hierarchy.append(qMakePair(loser->getIndex(), winner->getIndex()));
+        }
+        else
+        {
+            QList<Edge*> kMaxNeighbour;
+            selected->getKMostMutualNeighbours(kMaxNeighbour, k);
+            for (int i = 0 ; i < kMaxNeighbour.size(); i++)
+            {
+                Edge * e = kMaxNeighbour.at(i);
+                if (e->toVertex() == selected)
+                    neighbour = e->fromVertex();
+                else
+                    neighbour = e->toVertex();
+
+                winner = neighbour;
+                loser = selected;
+                //create the animation
+                //winner->absorb_retainEdge(e);
+                hierarchy.append(qMakePair(loser->getIndex(), winner->getIndex()));
+            }
+        }
+        players.removeOne(loser);
+        t++;
+    }
+    record_time_and_number_of_cluster(RandomAgg::III_a,t0.elapsed(),0); // the number of cluster is only determine later on
+    qDebug("III.a - Time elapsed: %d ms", t0.elapsed());
+    large_parse_retain_result();
+    //time is recorded first
+    record_time_and_number_of_cluster(RandomAgg::III_a,0,large_result.size());
+    //save the hierarchy tree
+    QString componentFilePath = "G_comp_k_" + QString::number(k) + ".txt" ;
+    save_hierarchy_tree(componentFilePath);
+}
+
+/**
+ * @brief Graph::IIIa_triangulation_j_from_k_max_neighbours
+ * @param j: number to be selected
+ * @param k: number of edges to queried
+ */
+void Graph::IIIa_triangulation_j_from_k_max_neighbours(const int &j, const int &k)
+{
+    //
+    hierarchy.clear();
+    if (!checkGraphCondition())
+    {
+        reConnectGraph();
+    }
+    //initialise arrays
+    QList<Vertex*> players = myVertexList;
+    quint32 t = 0;
+    QTime t0;
+    t0.start();
+
+    while(!players.empty()) //start
+    {
+        //select a vertex uniformly at random
+        quint32 size = players.size();
+        std::uniform_int_distribution<quint32> distribution(0,size-1);
+        quint32 selected_index = distribution(generator);
+        Vertex * selected = players.at(selected_index);
+        Vertex * neighbour, * winner, * loser;
+        if (selected->getNumberEdge() == 0)
+        {
+            winner = selected;
+            loser = selected;
+            hierarchy.append(qMakePair(loser->getIndex(), winner->getIndex()));
+        }
+        else
+        {
+            QList<Edge*> kMaxNeighbour;
+            selected->getKMostMutualNeighbours(kMaxNeighbour, k);
+            for (int i = 0; i < j; i++)
+            {
+                std::uniform_int_distribution<quint32> dis(0,kMaxNeighbour.size()-1);
+                quint32 ran = dis(generator);
+                Edge * e = kMaxNeighbour.at(ran);
+                kMaxNeighbour.removeAt(ran);
+                if (e->toVertex() == selected)
+                    neighbour = e->fromVertex();
+                else
+                    neighbour = e->toVertex();
+
+                winner = neighbour;
+                loser = selected;
+                //create the animation
+                //winner->absorb_retainEdge(e);
+                hierarchy.append(qMakePair(loser->getIndex(), winner->getIndex()));
+            }
+        }
+        players.removeOne(loser);
+        t++;
+    }
+    record_time_and_number_of_cluster(RandomAgg::III_a,t0.elapsed(),0); // the number of cluster is only determine later on
+    qDebug("III.a - Time elapsed: %d ms", t0.elapsed());
+    large_parse_retain_result();
+    //time is recorded first
+    record_time_and_number_of_cluster(RandomAgg::III_a,0,large_result.size());
+    //save the hierarchy tree
+    QString componentFilePath = "G_comp_j_" + QString::number(j) + +"_k_" + QString::number(k) + ".txt" ;
+    save_hierarchy_tree(componentFilePath);
+}
+
+
 /** The absorbed vertices are now retained in the graph.
  * Type III.a - Highest Triangles Neighbour
  * Pr(v) = u.a.r
  * Selet u: arg max tri(u)
  * Stationary
- * @brief Graph::random_aggregate_retain_vertex_using_triangulation_and_weight_comparison
+ * @brief Graph::random_aggregate_retain_vertex_using_triangulation_
  */
 void Graph::random_aggregate_retain_vertex_using_triangulation()
 {
@@ -5050,7 +5394,14 @@ bool checkMerge(const QList<quint32> &A, const QList<QList<quint32> > &truth)
     else return false;
 }
 
-double Graph::compute_GN_index()
+/**
+ * @brief Graph::compute_GN_index
+ * Fraction of Correctly Classified
+ * Modified by adding a parameter:
+ * @param: l number of vertices per cluster
+ * @return: [0,1]
+ */
+double Graph::compute_GN_index(int l)
 {
     quint32 n = myVertexList.size();
     //indexing ground truth community
@@ -5073,7 +5424,7 @@ double Graph::compute_GN_index()
     {
         if (v[i] == -1)
         {
-            quint32 truth_comm_index = i/32;
+            quint32 truth_comm_index = i/l;
             QList<quint32> truth = ground_truth_communities[truth_comm_index];
             quint32 result_comm_index = comm_map.value(i);
             QList<quint32> result = large_result[result_comm_index];
@@ -5083,7 +5434,7 @@ double Graph::compute_GN_index()
                 return -1.0;
             }
             //check for merging first
-            if (result.size() > 64 && checkMerge(result, ground_truth_communities))
+            if (result.size() > (l*2) && checkMerge(result, ground_truth_communities))
             {
                 for(int i = 0; i < result.size(); i++)
                     v[result[i]] = 0;
@@ -5093,14 +5444,12 @@ double Graph::compute_GN_index()
             //compare matching
                 int common = countCommon(truth, result);
                 int correct = common - 1;
-                if (correct < truth.size() / 2)
+                // if there are less than half of neighbours from the same community then it is placed in the wrong neighbourhood
+                if (correct < result.size() / 2)
                 {
                     v[i] = 0;
                 }
-                else if (correct >= truth.size() / 2)
-                {
-                    v[i] = 1;
-                }
+                else    v[i] = 1;
             }
         }
     }
@@ -5116,6 +5465,103 @@ double Graph::compute_GN_index()
     double newman_index = (double)match/n;
     printf("Girvan Newman Fraction of Correctly Classified: %f", newman_index);
     return newman_index;
+}
+
+/**
+ * @brief Graph::compute_majorities_membership
+ * The whole community is assigned a membership by majority
+ * that is if a community is occupied by a number of a-c1, b-c2, c-c3 and d-c4
+ * then the whole community is assigned by the max(a,b,c,d)
+ * else if tie taken u.a.r
+ * @param: l - number of veritces in a community
+ * @return: the number of correct over sum vertices
+ */
+// return the INDEX of the max membership
+inline int getMaxMembership(QList<int> membership)
+{
+    //check if equal
+    QList<int> largest; //index of largest membership
+    quint32 max = 0; //replace by INT_MAX maybe?
+    for (int i = 0; i < membership.size(); i++)
+    {
+        int count = membership.at(i);
+        if (count == max)
+        {
+            largest.append(i);
+        }
+        else if (count > max)
+        {
+            max = count;
+            largest.clear();
+            largest.append(i);
+        }
+    }
+    if (largest.size() == 1)    return largest[0];
+    else
+    {
+        std::uniform_int_distribution<int> dis(0,largest.size()-1);
+        int ran = dis(generator);
+        assert((ran <= largest.size()) && ("Out Of Bounds While Reaching For Max Element"));
+        return largest[ran];
+    }
+}
+
+double Graph::compute_majorities_membership(int l)
+{
+    if (large_result.empty())
+    {
+        qDebug() << "Error While Trying To Calculate: Membership by Majorities!";
+        qDebug() << "Large Result is Empty! Maybe It has not been Reloaded?";
+        return 0;
+    }
+    int correct = 0;
+    for (size_t i = 0; i < large_result.size(); i++)
+    {
+        QList<quint32> community = large_result.at(i);
+        // first findout the majority membership
+        QList<int> membership;
+        membership << 0 << 0 << 0 << 0;
+        for (size_t i = 0; i < community.size(); i++)
+        {
+            quint32 v = community.at(i);
+            int v_membership = v/l;
+            if (v_membership == 0) membership[0]++;
+            else if (v_membership == 1) membership[1]++;
+            else if (v_membership == 2) membership[2]++;
+            else membership[3]++;
+        }
+        int index_of_majority = getMaxMembership(membership);
+        correct += membership[index_of_majority];
+    }
+    double frac = (double) correct/myVertexList.size();
+    return frac;
+}
+
+/** For Gnp experiments where clusters' sizes are uniform
+ * @brief Graph::fraction_of_incorrect_edges
+ * Calculate the number of inter-cluster edges that the algorithm return over the
+ * total number of edges
+ * @param: l the number of vertices inside a cluster
+ * @return the fraction of incorrect edges: (number of inter-clusters edges)/2E
+ */
+double Graph::fraction_of_correct_mapping(int l)
+{
+    if (hierarchy.empty())
+    {
+        qDebug() << "ERROR While Trying to Calculate: Fraction of incorrect Edges";
+        qDebug() << "Hierarchy Is Empty! Maybe it has been cleared previously?";
+        return 0;
+    }
+    quint32 v = myVertexList.size();
+    quint32 correct = 0;
+    for (size_t i = 0 ; i < hierarchy.size(); i++)
+    {
+        QPair<quint32, quint32> edge = hierarchy.at(i);
+        if ((edge.first / l) == (edge.second / l))
+            correct++;
+    }
+    double frac = (double) correct/v;
+    return frac;
 }
 
 // --------------------------- POST AGGREGATION -----------------------------------------
